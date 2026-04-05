@@ -82,14 +82,14 @@ function buildNavbar() {
         {
           label: 'تسوية السائق',
           icon: 'fas fa-car',
-          href: '/drivers.html',
+          href: '/drivers',
           visible: role === 'supervisor' || role === 'admin',
           active: currentPage === 'drivers.html'
         },
         {
           label: 'كل التجميعات',
           icon: 'fas fa-list-alt',
-          href: '/all-closings.html',
+          href: '/all-closings',
           visible: role === 'supervisor' || role === 'admin',
           active: currentPage === 'all-closings.html'
         },
@@ -126,7 +126,7 @@ function buildNavbar() {
     <nav class="eco-nav">
       <div class="eco-nav-inner">
         <!-- Logo -->
-        <a href="/index.html" class="eco-nav-logo">
+        <a href="/" class="eco-nav-logo">
           <img
             src="/image/logo.png"
             alt="Tracify"
@@ -459,7 +459,7 @@ function toggleMobileMenu() {
     overlay.innerHTML = `
       <div class="eco-mobile-menu">
         <div class="eco-mobile-header">
-          <a href="/index.html" class="eco-mobile-logo">
+          <a href="/" class="eco-mobile-logo">
             <img
               src="/image/logo.png"
               alt="Tracify"

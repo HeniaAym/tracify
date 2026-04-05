@@ -1,4 +1,4 @@
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:3000/api`;
+const API_BASE = '/api';
 
 // ===== إدارة المستخدم والتوكن =====
 function getToken()  { return localStorage.getItem('token'); }

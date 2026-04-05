@@ -2,7 +2,7 @@ const express       = require('express');
 const mongoose      = require('mongoose');
 const cors          = require('cors');
 const helmet        = require('helmet');
-const mongoSanitize = require('express-mongo-sanitize');
+const mongoSanitize = require('mongo-sanitize');
 const rateLimit     = require('express-rate-limit');
 const path          = require('path');
 require('dotenv').config();
@@ -34,11 +34,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ─── MongoDB Injection Prevention ───
-app.use(mongoSanitize({
-  onSanitize: ({ req, key }) => {
-    console.warn(`Sanitized key: ${key}`);
-  }
-}));
+app.use((req, res, next) => {
+  if (req.body)   req.body   = mongoSanitize(req.body);
+  if (req.query)  req.query  = mongoSanitize(req.query);
+  if (req.params) req.params = mongoSanitize(req.params);
+  next();
+});
 
 // ─── General Rate Limiting ───
 const generalLimiter = rateLimit({

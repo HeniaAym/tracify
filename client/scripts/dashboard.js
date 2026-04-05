@@ -1,59 +1,46 @@
-const HOST = `${window.location.protocol}//${window.location.hostname}:3000`;
-
 async function loadDashboard() {
   try {
-    // جلب البيانات باستخدام fetchAPI (يضيف التوكن تلقائياً)
     const [parcels, closingsRes, deliveryStats] = await Promise.all([
       fetchAPI('/parcels'),
       fetchAPI(`/closings?from=${new Date().toISOString().split('T')[0]}&to=${new Date().toISOString().split('T')[0]}`),
       fetchAPI('/cash/monthly-delivery-stats').catch(() => ({ monthlyDeliveries: 0, currentMonth: '' }))
     ]);
 
-    // إحصائيات الطرود
     const paid    = parcels.filter(p => p.status === 'paid').length;
     const pending = parcels.filter(p => p.status === 'pending').length;
 
-    // تحصيل اليوم — من الصندوق المتصل أو مجموع كل الصناديق
     let todayTotal = 0;
     try {
       const boxId = getBoxId();
       if (boxId) {
-        const stats    = await fetchAPI(`/cash/today-stats?boxId=${boxId}`);
+        const stats = await fetchAPI(`/cash/today-stats?boxId=${boxId}`);
         todayTotal = stats.totalCollected || 0;
       } else {
-        // بدون صندوق محدد — نحسب من كل الحركات اليوم
         const mov = await fetchAPI('/cash/today-total');
-        if (mov) {
-          todayTotal = mov.total || 0;
-        }
+        if (mov) todayTotal = mov.total || 0;
       }
-    } catch(e) { /* نتجاهل الخطأ ونكمل */ }
+    } catch(e) {}
 
-    // الرصيد الإجمالي لكل الصناديق
     let balance = 0;
     try {
       const boxId = getBoxId();
       if (boxId) {
         const bal = await fetchAPI(`/cash/balance?boxId=${boxId}`);
-        if (bal) {
-          balance = bal.balance || 0;
-        }
+        if (bal) balance = bal.balance || 0;
       }
-    } catch(e) { /* نتجاهل */ }
+    } catch(e) {}
 
     animateNumber('balance',       balance);
     animateNumber('total-today',   todayTotal);
     animateNumber('paid-count',    paid);
     animateNumber('pending-count', pending);
 
-    // Update delivery stats
     if (deliveryStats && deliveryStats.monthlyDeliveries !== undefined) {
       animateNumber('monthly-deliveries', deliveryStats.monthlyDeliveries || 0);
       const label = document.getElementById('delivery-month-label');
       if (label) label.textContent = deliveryStats.currentMonth || '';
     }
 
-    // Update hero row stats (same values, different IDs)
     const hp = document.getElementById('hero-pending');
     const hd = document.getElementById('hero-paid');
     const hb = document.getElementById('hero-balance');
@@ -133,7 +120,7 @@ async function loadTodayClosings(closingsRes) {
             <span class="cc-meta"><i class="fas fa-user-tie"></i> ${c.closedBy || '—'}</span>
             <span class="cc-meta"><i class="fas fa-boxes"></i> ${parcelsCount} طرد</span>
             ${diffBadge}
-            <a href="/closing.html" class="cc-link"><i class="fas fa-eye"></i> تفاصيل</a>
+            <a href="/closing" class="cc-link"><i class="fas fa-eye"></i> تفاصيل</a>
           </div>
         </div>`;
     }).join('');

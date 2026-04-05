@@ -8,19 +8,18 @@ function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   // ⚠️ لا نحذف connected_box — يبقى في localStorage للمستخدم العائد
-  window.location.href = '/login.html';
+  window.location.href = '/login';
 }
 
 function requireAuth() {
   if (!getToken() || !getUser()) {
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return null;
   }
   return getUser();
 }
 
 // ===== الصندوق — يُخزن في localStorage كـ cache فقط =====
-// المصدر الحقيقي هو قاعدة البيانات دائماً
 const BOX_KEY = 'connected_box';
 
 function getConnectedBox()     { try { return JSON.parse(localStorage.getItem(BOX_KEY)); } catch { return null; } }
@@ -29,18 +28,15 @@ function clearConnectedBox()   { localStorage.removeItem(BOX_KEY); }
 function getBoxId()            { const b = getConnectedBox(); return b ? b._id : null; }
 
 // ===== جلب الصندوق المتصل للمستخدم الحالي من DB =====
-// يُستخدم عند الدفع لضمان أن الصندوق حقيقي حتى بعد إعادة الدخول
 async function getMyConnectedBox() {
   try {
     const user = getUser();
     if (!user) return null;
-    // جلب كل الصناديق المتصلة للمحطة
     const boxes = await fetchAPI('/moneybox/connected');
     if (!boxes || !boxes.length) return null;
-    // إذا المستخدم الحالي متصل بصندوق → أعده
     const myBox = boxes.find(b => b.connectedByName === user.username);
     if (myBox) {
-      setConnectedBox(myBox); // تحديث الـ cache
+      setConnectedBox(myBox);
       return myBox;
     }
     return null;
@@ -64,7 +60,7 @@ async function fetchAPI(endpoint, options = {}) {
     if (res.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login.html';
+      window.location.href = '/login';
       return;
     }
 
@@ -87,7 +83,6 @@ async function connectBox(boxId)  { return fetchAPI('/moneybox/connect', { metho
 async function getParcels(query)  { return fetchAPI(`/parcels/search?q=${encodeURIComponent(query)}`); }
 
 async function payParcel(id) {
-  // نجلب الصندوق من DB مباشرة — لا نعتمد على localStorage فقط
   let boxId = getBoxId();
   if (!boxId) {
     const myBox = await getMyConnectedBox();
@@ -130,7 +125,7 @@ async function addExpense(data) {
   return fetchAPI('/expenses', { method:'POST', body: JSON.stringify(data) });
 }
 
-// ===== التجميع — boxId من القائمة المنسدلة مباشرة =====
+// ===== التجميع =====
 async function closeCash(data) {
   if (!data.boxId) throw new Error('يجب اختيار الصندوق أولاً');
   return fetchAPI('/closings', { method:'POST', body: JSON.stringify(data) });

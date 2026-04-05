@@ -17,7 +17,6 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "cdnjs.cloudflare.com", "fonts.googleapis.com"],
-
       fontSrc: ["'self'", "fonts.gstatic.com", "cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'"]
@@ -58,6 +57,20 @@ const { injectStationFilter } = require('./middleware/stationFilter');
 
 app.use(express.static(path.join(__dirname, '../client')));
 
+// ─── Clean URLs ───
+const client = path.join(__dirname, '../client');
+app.get('/',               (req, res) => res.sendFile(path.join(client, 'index.html')));
+app.get('/login',          (req, res) => res.sendFile(path.join(client, 'login.html')));
+app.get('/import',         (req, res) => res.sendFile(path.join(client, 'import.html')));
+app.get('/returns',        (req, res) => res.sendFile(path.join(client, 'returns.html')));
+app.get('/expenses',       (req, res) => res.sendFile(path.join(client, 'expenses.html')));
+app.get('/closing',        (req, res) => res.sendFile(path.join(client, 'closing.html')));
+app.get('/history',        (req, res) => res.sendFile(path.join(client, 'history.html')));
+app.get('/admin',          (req, res) => res.sendFile(path.join(client, 'admin/index.html')));
+app.get('/admin/login',    (req, res) => res.sendFile(path.join(client, 'admin/login.html')));
+app.get('/admin/stations', (req, res) => res.sendFile(path.join(client, 'admin/stations.html')));
+app.get('/admin/users',    (req, res) => res.sendFile(path.join(client, 'admin/users.html')));
+
 // ─── MongoDB Connection ───
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ecomanager';
 
@@ -81,7 +94,7 @@ app.use('/api/returns',      authenticateToken, injectStationFilter, require('./
 app.use('/api/moneybox',     authenticateToken, injectStationFilter, require('./routes/moneybox'));
 app.use('/api/drivers',      authenticateToken, injectStationFilter, require('./routes/drivers'));
 app.use('/api/all-closings', authenticateToken, injectStationFilter, require('./routes/allClosings'));
-app.use('/api/superadmin', require('./routes/superadmin'));
+app.use('/api/superadmin',   require('./routes/superadmin'));
 
 // 404 handler for API routes
 app.use((req, res, next) => {

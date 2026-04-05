@@ -48,7 +48,7 @@ function buildNavbar() {
         {
           label: 'بحث وتسليم',
           icon: 'fas fa-search',
-          href: '/search',
+          href: '/search.html',
           visible: true,
           active: currentPage === 'search.html'
         },
@@ -254,19 +254,19 @@ function buildMobileNav() {
         {
           label: 'بحث وتسليم',
           icon: 'fas fa-search',
-          href: '/search.html',
+          href: '/search',
           visible: true
         },
         {
           label: 'استيراد Excel',
           icon: 'fas fa-file-upload',
-          href: '/import.html',
+          href: '/import',
           visible: true
         },
         {
           label: 'تعديل الطرود',
           icon: 'fas fa-edit',
-          href: '/edit.html',
+          href: '/edit',
           visible: role === 'supervisor' || role === 'admin'
         }
       ]
@@ -278,25 +278,25 @@ function buildMobileNav() {
         {
           label: 'إقفال الصندوق',
           icon: 'fas fa-lock',
-          href: '/closing.html',
+          href: '/closing',
           visible: role === 'supervisor' || role === 'admin'
         },
         {
           label: 'تسوية السائق',
           icon: 'fas fa-car',
-          href: '/drivers.html',
+          href: '/drivers',
           visible: role === 'supervisor' || role === 'admin'
         },
         {
           label: 'كل التجميعات',
           icon: 'fas fa-list-alt',
-          href: '/all-closings.html',
+          href: '/all-closings',
           visible: role === 'supervisor' || role === 'admin'
         },
         {
           label: 'المصاريف',
           icon: 'fas fa-wallet',
-          href: '/expenses.html',
+          href: '/expenses',
           visible: role === 'supervisor' || role === 'admin'
         }
       ]
@@ -307,7 +307,7 @@ function buildMobileNav() {
         {
           label: 'المرتجعات',
           icon: 'fas fa-undo-alt',
-          href: '/returns.html',
+          href: '/returns',
           visible: role === 'supervisor' || role === 'admin'
         }
       ]

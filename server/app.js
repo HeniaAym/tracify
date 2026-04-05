@@ -34,7 +34,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ─── MongoDB Injection Prevention ───
-app.use(mongoSanitize());
+app.use(mongoSanitize({
+  onSanitize: ({ req, key }) => {
+    console.warn(`Sanitized key: ${key}`);
+  }
+}));
 
 // ─── General Rate Limiting ───
 const generalLimiter = rateLimit({

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - الإدارة العامة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root {
+      --primary: #1e40af; --primary-dark: #1e3a8a; --primary-light: #eff6ff;
+      --danger: #dc2626; --danger-light: #fff1f2;
+      --text-dark: #0f172a; --text-secondary: #475569; --text-muted: #94a3b8;
+      --border: #e8edf2; --bg-body: #f1f5f9; --white: #ffffff;
+      --gray: #64748b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .login-card {
+      background: var(--white);
+      border-radius: 18px;
+      padding: 2.8rem 2.5rem 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .login-logo { text-align: center; margin-bottom: 2rem; }
+    .login-logo-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-size: 1.8rem; margin-bottom: 1rem;
+    }
+    .login-logo h1 { font-size: 1.6rem; font-weight: 900; }
+    .login-logo p { font-size: 0.95rem; color: var(--text-secondary); margin-top: 0.25rem; }
+    .form-group { margin-bottom: 1.3rem; }
+    .form-group label { display: block; font-size: 0.9rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .form-group input {
+      width: 100%; padding: 0.9rem 1.1rem;
+      border: 1.5px solid #d1d9e0; border-radius: 13px;
+      font-family: 'Cairo', sans-serif; font-size: 1rem;
+      background: var(--white); transition: all 0.2s; outline: none; font-weight: 600;
+    }
+    .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30,64,175,0.12); }
+    .btn {
+      width: 100%; padding: 0.95rem; border: none; border-radius: 13px;
+      font-family: 'Cairo', sans-serif; font-size: 1.05rem; font-weight: 800;
+      cursor: pointer; transition: all 0.2s;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white; box-shadow: 0 4px 16px rgba(30,64,175,0.28);
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(30,64,175,0.32); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .alert-danger {
+      padding: 0.9rem 1.1rem; border-radius: 13px; font-size: 0.9rem; font-weight: 700;
+      display: none; align-items: center; gap: 0.6rem; margin-top: 1rem;
+      background: var(--danger-light); color: #991b1b; border: 1px solid #fca5a5; border-right: 4px solid var(--danger);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon"><i class="fas fa-shield-alt"></i></div>
+      <h1>الإدارة العامة</h1>
+      <p>Tracify - لوحة التحكم</p>
+    </div>
+    <div id="alert-danger" class="alert-danger"><i class="fas fa-exclamation-circle"></i><span id="alert-text"></span></div>
+    <div class="form-group">
+      <label for="username">اسم المستخدم</label>
+      <input type="text" id="username" placeholder="superadmin" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="password">كلمة المرور</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn" id="login-btn" onclick="doLogin()">دخول</button>
+    <a href="/login.html" style="display:block;text-align:center;margin-top:1rem;color:var(--gray);text-decoration:none;font-weight:600;font-size:0.85rem;"><i class="fas fa-arrow-right"></i> العودة لصفحة التسجيل</a>
+  </div>
+  <script>
+    async function doLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) {
+        const e = document.getElementById('alert-danger');
+        document.getElementById('alert-text').textContent = 'يرجى إدخال البيانات';
+        e.style.display = 'flex';
+        return;
+      }
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true; btn.textContent = 'جاري التحقق...';
+      document.getElementById('alert-danger').style.display = 'none';
+      try {
+        const res = await fetch('/api/superadmin/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          const e = document.getElementById('alert-danger');
+          document.getElementById('alert-text').textContent = data.error; e.style.display = 'flex';
+        } else {
+          localStorage.setItem('admin_token', data.token);
+          window.location.href = '/admin/';
+        }
+      } catch {
+        const e = document.getElementById('alert-danger');
+        document.getElementById('alert-text').textContent = 'خطأ في الاتصال'; e.style.display = 'flex';
+      } finally { btn.disabled = false; btn.textContent = 'دخول'; }
+    }
+    document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  </script>
+</body>
+</html>

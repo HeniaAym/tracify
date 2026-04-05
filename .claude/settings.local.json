@@ -1,0 +1,17 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://openrouter.ai/api",
+    "ANTHROPIC_AUTH_TOKEN": "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",
+    "ANTHROPIC_API_KEY": "",
+    "ANTHROPIC_MODEL": "qwen/qwen3.6-plus:free"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(D:/ECOMANAGER/client/image/dashboard-hero.png)",
+      "Bash(netstat -ano)",
+      "Bash(Taskkill //FI \"IMAGENAME eq node.exe\" //F)",
+      "Bash(taskkill //FI \"IMAGENAME eq node.exe\" //F)",
+      "Bash(node server/scripts/initCounter.js)"
+    ]
+  }
+}

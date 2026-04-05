@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسوية السائق - Tracify</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <style>
+    .driver-card {
+      background: white; border-radius: var(--radius); border: 1px solid var(--border);
+      padding: 1rem 1.25rem; transition: var(--transition); cursor: pointer;
+    }
+    .driver-card:hover { box-shadow: var(--shadow-sm); border-color: var(--primary); }
+    .driver-card.active { border-color: var(--primary); background: #f0f0ff; }
+    .price-input {
+      width: 80px; padding: .3rem .5rem; border: 1px solid var(--border);
+      border-radius: 6px; font-family: 'Cairo', sans-serif; font-size: .85rem;
+      text-align: center;
+    }
+    .price-input:focus { border-color: var(--primary); outline: none; }
+    .preview-row-settled { background: #fef2f2 !important; }
+    .settle-summary {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem; padding: 1rem; background: var(--light); border-radius: var(--radius);
+      margin-top: 1rem;
+    }
+    .settle-stat { text-align: center; }
+    .settle-stat .label { font-size: .75rem; color: var(--gray); font-weight: 600; }
+    .settle-stat .value { font-size: 1.3rem; font-weight: 800; color: var(--dark); }
+    .settle-stat .value.green { color: var(--success); }
+    .settle-stat .value.red { color: var(--danger); }
+    .settle-stat .value.blue { color: var(--primary); }
+    .settle-stat .value.orange { color: var(--warning); }
+    .tab-btn {
+      padding: .6rem 1.2rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: white; font-family: 'Cairo', sans-serif; font-weight: 700;
+      font-size: .85rem; cursor: pointer; color: var(--gray); transition: var(--transition);
+    }
+    .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .tab-btn i { margin-left: .4rem; }
+    .btn-pdf {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .15rem .5rem; border-radius: 4px; font-size: .75rem; font-weight: 700;
+      background: #fef3c7; color: #b45309; border: none; cursor: pointer;
+      font-family: 'Cairo', sans-serif; transition: all .2s;
+    }
+    .btn-pdf:hover { background: #b45309; color: white; transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+<div class="container">
+  <div class="page-header">
+    <div class="page-header-icon" style="background:linear-gradient(135deg,#06b6d4,#3b82f6);"><i class="fas fa-car"></i></div>
+    <div><h1>تسوية السائق</h1><p>إدارة السائقين وتسوية الطرود مع الموزعين</p></div>
+  </div>
+
+  <!-- تبويبات -->
+  <div style="display:flex;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+    <button class="tab-btn active" onclick="switchTab('settle')"><i class="fas fa-money-bill-wave"></i> تسوية جديدة</button>
+    <button class="tab-btn" onclick="switchTab('drivers')"><i class="fas fa-users"></i> إدارة السائقين</button>
+    <button class="tab-btn" onclick="switchTab('history')"><i class="fas fa-history"></i> سجل التسويات</button>
+  </div>
+
+  <!-- ============ تبويب: تسوية جديدة ============ -->
+  <div id="tab-settle">
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:1.25rem;align-items:start;">
+      <!-- قائمة السائقين -->
+      <div class="card">
+        <div class="card-header"><div class="card-header-title"><i class="fas fa-users"></i> السائقون</div></div>
+        <div class="card-body" id="drivers-list" style="display:flex;flex-direction:column;gap:.5rem;max-height:500px;overflow-y:auto;">
+          <div style="text-align:center;color:var(--gray);padding:1rem;"><i class="fas fa-spinner fa-spin"></i></div>
+        </div>
+      </div>
+
+      <!-- نموذج التسوية -->
+      <div>
+        <div class="card">
+          <div class="card-header"><div class="card-header-title"><i class="fas fa-file-upload"></i> رفع ملف Excel</div></div>
+          <div class="card-body">
+            <div id="settle-driver-info" style="display:none;padding:.5rem 0;">
+              <div style="font-size:.8rem;color:var(--gray);display:flex;gap:1rem;">
+                <span><i class="fas fa-tag"></i> السعر: <strong id="settle-price">0</strong> DA</span>
+                <span><i class="fas fa-map-marker-alt"></i> المنطقة: <strong id="settle-area">—</strong></span>
+              </div>
+            </div>
+            <form id="uploadForm" style="margin-top:.5rem;display:none;">
+              <input type="file" id="excelFile" accept=".xlsx,.xls" required>
+              <button type="submit" class="btn btn-primary" style="margin-top:.5rem;"><i class="fas fa-upload"></i> تحليل</button>
+            </form>
+            <div id="settle-select-driver" style="text-align:center;color:var(--gray);padding:2rem;">
+              <i class="fas fa-hand-point-right" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+              اختر سائقاً من القائمة لبدء التسوية
+            </div>
+          </div>
+        </div>
+
+        <!-- جدول المعاينة -->
+        <div class="card" id="preview-card" style="display:none;margin-top:1rem;">
+          <div class="card-header"><div class="card-header-title"><i class="fas fa-table"></i> معاينة الطرود</div></div>
+          <div class="table-wrapper" style="border:none;border-radius:0 0 var(--radius) var(--radius);">
+            <table class="table">
+              <thead><tr><th>#</th><th>رقم التتبع</th><th>العميل</th><th>المبلغ</th><th>الحالة</th></tr></thead>
+              <tbody id="preview-body"></tbody>
+            </table>
+          </div>
+          <div id="summary-section" style="display:none;"></div>
+        </div>
+
+        <div id="settle-result" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ تبويب: إدارة السائقين ============ -->
+  <div id="tab-drivers" style="display:none;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-title"><i class="fas fa-users"></i> السائقون</div>
+        <button class="btn btn-primary" onclick="showAddDriverForm()" style="padding:.45rem .8rem;font-size:.85rem;"><i class="fas fa-plus"></i> إضافة سائق</button>
+      </div>
+      <div class="table-wrapper" style="border:none;border-radius:0 0 var(--radius) var(--radius);">
+        <table class="table">
+          <thead><tr><th>اسم السائق</th><th>نوع المركبة</th><th>المنطقة</th><th>سعر التوصيل</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+          <tbody id="manage-drivers-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ تبويب: سجل التسويات ============ -->
+  <div id="tab-history" style="display:none;">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-header-title"><i class="fas fa-history"></i> سجل التسويات</div>
+      </div>
+      <div class="card-body" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+        <select id="history-driver" style="padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:'Cairo',sans-serif;">
+          <option value="all">كل السائقين</option>
+        </select>
+        <input type="date" id="history-from" style="padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:'Cairo',sans-serif;">
+        <input type="date" id="history-to" style="padding:.5rem;border:1px solid var(--border);border-radius:6px;font-family:'Cairo',sans-serif;">
+        <button class="btn btn-primary" onclick="loadSettlementHistory()" style="padding:.5rem 1rem;font-size:.85rem;"><i class="fas fa-search"></i> بحث</button>
+      </div>
+      <div class="table-wrapper" style="border:none;border-radius:0 0 var(--radius) var(--radius);">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>المرجع</th>
+              <th>التاريخ</th>
+              <th>السائق</th>
+              <th>عدد الطرود</th>
+              <th>مجموع المبالغ</th>
+              <th>نصيب الموزع</th>
+              <th>خصم الشركة</th>
+              <th>المستحق</th>
+              <th>المنفذ</th>
+              <th>PDF</th>
+            </tr>
+          </thead>
+          <tbody id="settlement-history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- نموذج إضافة/تعديل سائق -->
+<div class="modal-overlay" id="driverModal" style="display:none;">
+  <div style="background:white;border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:1.5rem;max-width:500px;width:100%;">
+    <h3 id="driver-modal-title" style="margin-bottom:1rem;"><i class="fas fa-user-plus" style="color:var(--primary);"></i> إضافة سائق</h3>
+    <form id="driverForm">
+      <input type="hidden" id="driver-id">
+      <div class="form-group"><label>اسم السائق</label><input type="text" id="d-name" required></div>
+      <div class="form-group">
+        <label>نوع المركبة</label>
+        <select id="d-vehicle">
+          <option value="سيارة">سيارة</option>
+          <option value="دراجة">دراجة</option>
+          <option value="شاحنة">شاحنة</option>
+        </select>
+      </div>
+      <div class="form-group"><label>سعر التوصيل (DA)</label><input type="number" id="d-price" min="0" value="0"></div>
+      <div class="form-group"><label>المنطقة</label><input type="text" id="d-area"></div>
+      <div style="display:flex;gap:.5rem;">
+        <button type="submit" class="btn btn-primary" style="flex:1;"><i class="fas fa-save"></i> حفظ</button>
+        <button type="button" class="btn btn-danger" onclick="hideDriverModal()" style="flex:0 0 auto;">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="global-loader" class="loader" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;"></div>
+<script src="scripts/api.js"></script>
+<script src="scripts/navbar.js"></script>
+
+<script>
+let selectedDriver = null;
+let allDrivers = [];
+let previewData = [];
+
+// ==================================================
+// التبويبات
+// ==================================================
+function switchTab(name) {
+  ['settle','drivers','history'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['settle','drivers','history'][i] === name);
+  });
+  if (name === 'drivers') loadManageDrivers();
+  if (name === 'history') { loadHistoryDriverList(); loadSettlementHistory(); }
+}
+
+// ==================================================
+// تحميل السائقين
+// ==================================================
+async function loadDrivers() {
+  try {
+    allDrivers = await fetchAPI('/drivers') || [];
+    renderDriverSelect();
+  } catch (e) { console.error(e); }
+}
+
+function renderDriverSelect() {
+  const container = document.getElementById('drivers-list');
+  if (!allDrivers.length) {
+    container.innerHTML = '<div style="text-align:center;color:var(--gray);padding:1rem;">لا يوجد سائقون — أضف سائقاً أولاً</div>';
+    return;
+  }
+  container.innerHTML = allDrivers.map(d => `
+    <div class="driver-card ${selectedDriver && selectedDriver._id === d._id ? 'active' : ''}"
+         onclick="selectDriver('${d._id}')">
+      <div style="display:flex;align-items:center;gap:.5rem;">
+        <span style="font-size:1.2rem;">🚗</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.9rem;">${d.name}</div>
+          <div style="font-size:.75rem;color:var(--gray);">${d.vehicleType || '—'} | ${d.workArea || '—'}</div>
+        </div>
+        <div style="font-weight:800;color:var(--success);font-size:.85rem;">${d.deliveryPrice || 0} DA</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ==================================================
+// اختيار سائق
+// ==================================================
+function selectDriver(id) {
+  selectedDriver = allDrivers.find(d => d._id === id);
+  document.getElementById('settle-select-driver').style.display = 'none';
+  document.getElementById('settle-driver-info').style.display = 'block';
+  document.getElementById('uploadForm').style.display = 'block';
+  document.getElementById('settle-price').textContent = selectedDriver.deliveryPrice;
+  document.getElementById('settle-area').textContent = selectedDriver.workArea || '—';
+  document.getElementById('preview-card').style.display = 'none';
+  document.getElementById('settle-result').innerHTML = '';
+  document.getElementById('excelFile').value = '';
+  renderDriverSelect();
+}
+
+// ==================================================
+// رفع Excel
+// ==================================================
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!selectedDriver) return;
+
+  const file = document.getElementById('excelFile').files[0];
+  if (!file) return;
+
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const parsed = await fetchAPI('/upload/parse', { method: 'POST', body: fd });
+    const parcelList = parsed.parcels || [];
+
+    if (!parcelList.length) {
+      document.getElementById('settle-result').innerHTML =
+        '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> لا توجد طرود في الملف</div>';
+      return;
+    }
+
+    const response = await fetchAPI(`/drivers/${selectedDriver._id}/settle`, {
+      method: 'POST',
+      body: JSON.stringify({
+        driverId: selectedDriver._id,
+        parcels: parcelList.map(p => ({
+          tracking: p.tracking || '',
+          customer: p.customer || '',
+          price:    Number(p.price) || 0
+        }))
+      })
+    });
+
+    if (response.alreadySettled) {
+      document.getElementById('settle-result').innerHTML = `
+        <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i>
+          <div><strong>طرود تم تسويتها سابقاً:</strong><br>${response.settledList.join('، ')}</div>
+        </div>`;
+      return;
+    }
+
+    if (response.success) {
+      const s = response.settlement;
+      document.getElementById('settle-result').innerHTML = `
+        <div class="alert alert-success"><i class="fas fa-check-circle"></i>
+          <div><strong>تمت التسوية بنجاح — ${s.settlementNumber}</strong></div>
+        </div>`;
+      document.getElementById('excelFile').value = '';
+      document.getElementById('preview-card').style.display = 'none';
+      return;
+    }
+  } catch (err) {
+    document.getElementById('settle-result').innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> خطأ: ${err.message}</div>`;
+  }
+});
+
+// ==================================================
+// إدارة السائقين
+// ==================================================
+async function loadManageDrivers() {
+  try {
+    const drivers = await fetchAPI('/drivers') || [];
+    allDrivers = drivers;
+    const tbody = document.getElementById('manage-drivers-tbody');
+    if (!drivers.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon" style="background:#e0f2fe;color:#06b6d4;"><i class="fas fa-users"></i></div><h3>لا يوجد سائقون</h3><p>أضف سائقاً جديداً للبدء</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = drivers.map(d => `
+      <tr>
+        <td><strong>🚗 ${d.name}</strong></td>
+        <td>${d.vehicleType || '—'}</td>
+        <td>${d.workArea || '—'}</td>
+        <td><input class="price-input" type="number" min="0" value="${d.deliveryPrice}"
+          onchange="updatePrice('${d._id}', this.value)"></td>
+        <td><span class="badge ${d.isActive ? 'badge-success' : 'badge-danger'}">${d.isActive ? 'نشط' : 'غير نشط'}</span></td>
+        <td>
+          <button class="btn btn-info" style="padding:.3rem .6rem;font-size:.8rem;" onclick="editDriver('${d._id}')"><i class="fas fa-edit"></i></button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function updatePrice(id, value) {
+  try {
+    await fetchAPI(`/drivers/${id}/price`, { method: 'PUT', body: JSON.stringify({ deliveryPrice: Number(value) }) });
+    await loadDrivers();
+  } catch (e) { console.error(e); }
+}
+
+function showAddDriverForm() {
+  document.getElementById('driver-modal-title').innerHTML = '<i class="fas fa-user-plus" style="color:var(--primary);"></i> إضافة سائق';
+  document.getElementById('driver-id').value = '';
+  document.getElementById('d-name').value = '';
+  document.getElementById('d-vehicle').value = 'سيارة';
+  document.getElementById('d-price').value = '0';
+  document.getElementById('d-area').value = '';
+  document.getElementById('driverModal').style.display = 'flex';
+}
+
+function hideDriverModal() {
+  document.getElementById('driverModal').style.display = 'none';
+}
+
+function editDriver(id) {
+  const d = allDrivers.find(x => x._id === id);
+  if (!d) return;
+  document.getElementById('driver-modal-title').innerHTML = '<i class="fas fa-user-edit" style="color:var(--primary);"></i> تعديل سائق';
+  document.getElementById('driver-id').value = id;
+  document.getElementById('d-name').value = d.name;
+  document.getElementById('d-vehicle').value = d.vehicleType || 'سيارة';
+  document.getElementById('d-price').value = d.deliveryPrice;
+  document.getElementById('d-area').value = d.workArea || '';
+  document.getElementById('driverModal').style.display = 'flex';
+}
+
+document.getElementById('driverForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const id = document.getElementById('driver-id').value;
+  const data = {
+    name: document.getElementById('d-name').value,
+    vehicleType: document.getElementById('d-vehicle').value,
+    deliveryPrice: Number(document.getElementById('d-price').value),
+    workArea: document.getElementById('d-area').value
+  };
+  try {
+    if (id) {
+      await fetchAPI(`/drivers/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    } else {
+      await fetchAPI('/drivers', { method: 'POST', body: JSON.stringify(data) });
+    }
+    hideDriverModal();
+    loadManageDrivers();
+    loadDrivers();
+  } catch (err) { alert(err.message); }
+});
+
+document.getElementById('driverModal').addEventListener('click', function(ev) {
+  if (ev.target === this) hideDriverModal();
+});
+
+// ==================================================
+// سجل التسويات
+// ==================================================
+async function loadHistoryDriverList() {
+  try {
+    const drivers = await fetchAPI('/drivers') || [];
+    const sel = document.getElementById('history-driver');
+    sel.innerHTML = '<option value="all">كل السائقين</option>' +
+      drivers.map(d => `<option value="${d._id}">${d.name}</option>`).join('');
+  } catch (e) {}
+}
+
+async function loadSettlementHistory() {
+  let url = '/drivers/settlements?';
+  const driver = document.getElementById('history-driver').value;
+  const from = document.getElementById('history-from').value;
+  const to = document.getElementById('history-to').value;
+
+  if (driver !== 'all') url += `driver=${driver}&`;
+  if (from) url += `from=${from}&`;
+  if (to) url += `to=${to}&`;
+
+  try {
+    const settlements = await fetchAPI(url);
+    const tbody = document.getElementById('settlement-history-tbody');
+    if (!settlements.length) {
+      tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-history" style="font-size:2rem;display:block;opacity:.3;margin-bottom:.5rem;"></i><h3>لا توجد تسويات</h3></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = settlements.map(s => `
+      <tr>
+        <td><span style="font-family:monospace;font-weight:800;background:#fce7f3;color:#be185d;padding:.2rem .5rem;border-radius:4px;font-size:.8rem;">${s.settlementNumber}</span></td>
+        <td style="font-size:.82rem;color:var(--gray);">${new Date(s.settledAt).toLocaleString('ar-DZ')}</td>
+        <td>${s.driverName}</td>
+        <td>${s.totalParcels}</td>
+        <td>${Number(s.totalAmount || 0).toLocaleString('ar-DZ')} DA</td>
+        <td>${Number(s.driverDeliveryFee || 0).toLocaleString('ar-DZ')} DA</td>
+        <td>${Number(s.companyDeduction || 0).toLocaleString('ar-DZ')} DA</td>
+        <td style="font-weight:800;">${Number(s.amountDueToCompany || 0).toLocaleString('ar-DZ')} DA</td>
+        <td>${s.settledBy}</td>
+        <td>
+          <button class="btn-pdf" onclick='exportSettlementPDF(${JSON.stringify(s)})'>
+            <i class="fas fa-file-pdf"></i> PDF
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error(e); }
+}
+
+// ==================================================
+// تصدير PDF تسوية السائق
+// ==================================================
+async function exportSettlementPDF(s) {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+  // تحميل اللوغو
+  let logoBase64 = '';
+  try {
+    const resp = await fetch('/image/logo.png');
+    const blob = await resp.blob();
+    logoBase64 = await new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) { console.warn('Logo not found'); }
+
+  const logoTag = logoBase64
+    ? `<img src="${logoBase64}" alt="Logo" style="height:56px;object-fit:contain;">`
+    : `<span style="font-size:1.3rem;font-weight:900;color:#be185d;">Tracify</span>`;
+
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString('ar-DZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+  const settledDateStr = new Date(s.settledAt).toLocaleDateString('ar-DZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  const parcels = s.parcels || [];
+
+  const rowsHtml = parcels.length
+    ? parcels.map((p, i) => `
+        <tr style="background:${i % 2 === 0 ? '#ffffff' : '#fff5f9'};">
+          <td style="text-align:center;color:#94a3b8;font-size:.78rem;font-weight:600;">${i + 1}</td>
+          <td style="font-family:monospace;font-weight:800;font-size:.82rem;color:#1e1b4b;">${p.tracking}</td>
+          <td style="font-size:.83rem;">${p.customer || '—'}</td>
+          <td style="font-weight:800;color:${p.price === 0 ? '#dc2626' : '#be185d'};font-size:.88rem;">
+            ${Number(p.price).toLocaleString('ar-DZ')} DA
+            ${p.price === 0 ? '<span style="font-size:.7rem;background:#fef2f2;color:#dc2626;padding:1px 5px;border-radius:3px;margin-right:4px;">مجاني</span>' : ''}
+          </td>
+        </tr>`).join('')
+    : `<tr><td colspan="4" style="text-align:center;padding:2rem;color:#94a3b8;">لا توجد طرود</td></tr>`;
+
+  const html = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>تسوية ${s.settlementNumber}</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Cairo',Arial,sans-serif; direction:rtl; background:#fff5f9; color:#1e1b4b; padding:28px; }
+
+        /* Header */
+        .header {
+          display:flex; align-items:center; justify-content:space-between;
+          background:linear-gradient(135deg,#be185d 0%,#7c3aed 100%);
+          border-radius:16px; padding:20px 26px; margin-bottom:16px; color:white;
+          box-shadow:0 8px 32px rgba(190,24,93,.25);
+        }
+        .header-left { display:flex; align-items:center; gap:18px; }
+        .header-logo {
+          background:white; border-radius:12px; padding:10px 14px;
+          display:flex; align-items:center; justify-content:center;
+          min-width:80px; min-height:72px; box-shadow:0 4px 12px rgba(0,0,0,.15);
+        }
+        .header-divider { width:1px; height:50px; background:rgba(255,255,255,.3); margin:0 4px; }
+        .header-title h1 { font-size:1.35rem; font-weight:900; margin-bottom:3px; letter-spacing:-.5px; }
+        .header-title p { font-size:.76rem; opacity:.8; font-weight:400; }
+        .header-right { text-align:left; font-size:.8rem; line-height:1.85; opacity:.92; }
+        .header-right strong { font-weight:800; }
+
+        /* Settlement badge */
+        .settlement-badge {
+          display:inline-flex; align-items:center; gap:8px;
+          background:white; color:#be185d; border-radius:10px;
+          padding:10px 18px; font-weight:900; font-size:1rem;
+          margin-bottom:16px; box-shadow:0 2px 10px rgba(190,24,93,.12);
+          font-family:'Courier New',monospace;
+        }
+
+        /* Driver info */
+        .driver-info {
+          display:flex; gap:12px; margin-bottom:16px;
+        }
+        .info-card {
+          flex:1; background:white; border-radius:12px; padding:14px 18px;
+          border-right:4px solid #be185d; box-shadow:0 2px 10px rgba(190,24,93,.07);
+        }
+        .info-card.purple { border-right-color:#7c3aed; }
+        .info-card.cyan { border-right-color:#06b6d4; }
+        .info-label { font-size:.7rem; color:#94a3b8; margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+        .info-value { font-size:.95rem; font-weight:800; color:#1e1b4b; }
+
+        /* Financial summary */
+        .fin-grid {
+          display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;
+        }
+        .fin-card {
+          background:white; border-radius:12px; padding:12px 16px;
+          box-shadow:0 2px 10px rgba(0,0,0,.06); text-align:center;
+          border-top:3px solid #be185d;
+        }
+        .fin-card.green { border-top-color:#16a34a; }
+        .fin-card.red { border-top-color:#dc2626; }
+        .fin-card.purple { border-top-color:#7c3aed; }
+        .fin-label { font-size:.68rem; color:#94a3b8; font-weight:600; margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+        .fin-value { font-size:.95rem; font-weight:900; color:#1e1b4b; }
+
+        /* Section title */
+        .section-title {
+          display:flex; align-items:center; gap:8px;
+          font-size:.76rem; font-weight:800; color:#be185d;
+          text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;
+        }
+        .section-title::before {
+          content:''; display:inline-block; width:4px; height:16px;
+          background:linear-gradient(180deg,#be185d,#7c3aed); border-radius:2px;
+        }
+
+        /* Table */
+        .table-wrapper { background:white; border-radius:14px; overflow:hidden; box-shadow:0 4px 20px rgba(190,24,93,.08); margin-bottom:18px; }
+        table { width:100%; border-collapse:collapse; }
+        thead tr { background:linear-gradient(90deg,#be185d 0%,#9d174d 50%,#7c3aed 100%); }
+        thead th { color:white; padding:11px 12px; font-size:.78rem; font-weight:700; text-align:right; }
+        tbody td { padding:9px 12px; border-bottom:1px solid #fce7f3; vertical-align:middle; }
+        tbody tr:last-child td { border-bottom:none; }
+
+        /* Footer */
+        .footer { display:flex; justify-content:space-between; align-items:center; }
+        .due-box {
+          background:linear-gradient(135deg,#be185d,#7c3aed); color:white;
+          border-radius:12px; padding:14px 26px; box-shadow:0 4px 16px rgba(190,24,93,.3);
+        }
+        .due-box .due-label { font-size:.72rem; opacity:.8; font-weight:400; margin-bottom:3px; }
+        .due-box .due-amount { font-size:1.3rem; font-weight:900; letter-spacing:-.5px; }
+        .footer-note { text-align:left; font-size:.7rem; color:#94a3b8; line-height:1.7; }
+        .footer-note .brand { font-weight:800; color:#be185d; font-size:.76rem; }
+        .watermark {
+          position:fixed; bottom:40px; left:50%; transform:translateX(-50%) rotate(-30deg);
+          font-size:5rem; font-weight:900; color:rgba(190,24,93,.04);
+          pointer-events:none; white-space:nowrap; letter-spacing:8px; z-index:0;
+        }
+
+        @media print {
+          body { background:white; padding:15px; }
+          .table-wrapper, .info-card, .fin-card { box-shadow:none; }
+        }
+      </style>
+    </head>
+    <body>
+
+      <div class="watermark">TRACIFY</div>
+
+      <!-- Header -->
+      <div class="header">
+        <div class="header-left">
+          <div class="header-logo">${logoTag}</div>
+          <div class="header-divider"></div>
+          <div class="header-title">
+            <h1>تقرير تسوية السائق</h1>
+            <p>Driver Settlement Report — Tracify</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <div>📅 <strong>${dateStr}</strong></div>
+          <div>⏰ <strong>${timeStr}</strong></div>
+          <div>🏢 <strong>${user.stationName || 'غير محدد'}</strong></div>
+          <div>👤 <strong>${user.username || 'غير محدد'}</strong></div>
+        </div>
+      </div>
+
+      <!-- Settlement number -->
+      <div class="settlement-badge">🧾 رقم التسوية: ${s.settlementNumber}</div>
+
+      <!-- Driver info -->
+      <div class="driver-info">
+        <div class="info-card">
+          <div class="info-label">السائق</div>
+          <div class="info-value">🚗 ${s.driverName}</div>
+        </div>
+        <div class="info-card purple">
+          <div class="info-label">نوع المركبة</div>
+          <div class="info-value">${s.vehicleType || '—'}</div>
+        </div>
+        <div class="info-card cyan">
+          <div class="info-label">تاريخ التسوية</div>
+          <div class="info-value" style="font-size:.82rem;">${settledDateStr}</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">سعر التوصيل / طرد</div>
+          <div class="info-value">${Number(s.deliveryPrice || 0).toLocaleString('ar-DZ')} DA</div>
+        </div>
+      </div>
+
+      <!-- Financial summary -->
+      <div class="fin-grid">
+        <div class="fin-card">
+          <div class="fin-label">عدد الطرود</div>
+          <div class="fin-value">${s.totalParcels}</div>
+        </div>
+        <div class="fin-card">
+          <div class="fin-label">مجموع المبالغ</div>
+          <div class="fin-value">${Number(s.totalAmount || 0).toLocaleString('ar-DZ')} DA</div>
+        </div>
+        <div class="fin-card purple">
+          <div class="fin-label">نصيب الموزع</div>
+          <div class="fin-value">${Number(s.driverDeliveryFee || 0).toLocaleString('ar-DZ')} DA</div>
+        </div>
+        <div class="fin-card red">
+          <div class="fin-label">خصم الشركة</div>
+          <div class="fin-value">${Number(s.companyDeduction || 0).toLocaleString('ar-DZ')} DA</div>
+        </div>
+      </div>
+
+      <!-- Parcels table -->
+      <div class="section-title">تفاصيل الطرود المُسوَّاة</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>رقم التتبع</th>
+              <th>العميل</th>
+              <th>المبلغ</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="due-box">
+          <div class="due-label">المبلغ المستحق للشركة</div>
+          <div class="due-amount">${Number(s.amountDueToCompany || 0).toLocaleString('ar-DZ')} DA</div>
+        </div>
+        <div class="footer-note">
+          <div class="brand">Tracify</div>
+          تم إنشاء هذا التقرير تلقائياً<br>
+          منفذ التسوية: ${s.settledBy || '—'}<br>
+          ${dateStr} — ${timeStr}
+        </div>
+      </div>
+
+    </body>
+    </html>
+  `;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 800);
+}
+
+// ==================================================
+// تحميل السائقين عند فتح الصفحة
+// ==================================================
+loadDrivers();
+</script>
+</body>
+</html>

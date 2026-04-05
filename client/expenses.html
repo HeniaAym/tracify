@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المصاريف - Tracify</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <style>
+    .source-tabs { display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.25rem; }
+    .source-tab { display:flex;flex-direction:column;align-items:center;gap:.35rem;padding:.82rem .5rem;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);background:var(--light); }
+    .source-tab i { font-size:1.25rem;color:var(--gray); }
+    .source-tab span { font-size:.78rem;font-weight:700;color:var(--gray); }
+    .source-tab:hover,.source-tab.active { border-color:var(--primary);background:var(--primary-light); }
+    .source-tab.active i,.source-tab.active span { color:var(--primary); }
+    .source-panel { display:none; }
+    .source-panel.active { display:block;animation:fadeIn .2s ease; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+    .cat-icons { display:grid;grid-template-columns:repeat(3,1fr);gap:.45rem;margin-bottom:.25rem; }
+    .cat-icon-btn { display:flex;flex-direction:column;align-items:center;gap:.28rem;padding:.6rem .4rem;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition);background:var(--light); }
+    .cat-icon-btn i { font-size:1.05rem; }
+    .cat-icon-btn span { font-size:.65rem;font-weight:700;color:var(--gray);text-align:center;line-height:1.2; }
+    .cat-icon-btn:hover,.cat-icon-btn.active { border-color:var(--accent);background:#fffbeb; }
+    .cat-icon-btn.active span { color:#92400e; }
+    .filter-bar { background:white;border-radius:var(--radius);border:1px solid var(--border);padding:.82rem 1.1rem;display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap;box-shadow:var(--shadow);position:sticky;top:56px;z-index:10; }
+    .filter-bar .form-group { margin:0;min-width:130px;flex:1; }
+    .filter-bar label { font-size:.72rem; }
+    .table-scroll-wrap { border-radius:var(--radius);border:1px solid var(--border);background:white;overflow:hidden; }
+    .table-scroll-inner { max-height:calc(100vh - 310px);overflow-y:auto; }
+    .table-scroll-inner::-webkit-scrollbar { width:4px; }
+    .table-scroll-inner::-webkit-scrollbar-thumb { background:var(--border);border-radius:2px; }
+    .table-scroll-inner table { width:100%;border-collapse:collapse;font-size:.875rem; }
+    .table-scroll-inner thead th { background:var(--light);border-bottom:2px solid var(--border);padding:.65rem 1rem;font-weight:700;color:var(--gray);font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;z-index:5;text-align:right; }
+    .table-scroll-inner tbody td { padding:.7rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle; }
+    .table-scroll-inner tbody tr:last-child td { border-bottom:none; }
+    .table-scroll-inner tbody tr:hover { background:var(--light); }
+    .total-bar { background:white;border-radius:var(--radius);border:1px solid var(--border);padding:.82rem 1.25rem;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow); }
+    .cat-badge { display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .62rem;border-radius:20px;font-size:.72rem;font-weight:700;background:#fef3c7;color:#92400e; }
+    .src-badge { display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .58rem;border-radius:20px;font-size:.7rem;font-weight:700; }
+    .src-badge.box { background:#dbeafe;color:#1e40af; }
+    .src-badge.closing { background:#ede9fe;color:#6d28d9; }
+    .del-btn { width:27px;height:27px;border:1px solid var(--border);background:none;border-radius:var(--radius-xs);color:var(--gray);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.78rem;transition:var(--transition); }
+    .del-btn:hover { background:var(--danger);color:white;border-color:var(--danger); }
+    .expenses-layout { display:grid;grid-template-columns:390px 1fr;gap:1.25rem;align-items:start; }
+    @media(max-width:900px){ .expenses-layout{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+<div class="container">
+    <div class="page-header">
+      <div class="page-header-icon" style="background:linear-gradient(135deg,#f59e0b,#ef4444);"><i class="fas fa-wallet"></i></div>
+      <div><h1>المصاريف</h1><p>تسجيل ومتابعة نفقات المكتب</p></div>
+    </div>
+
+    <div class="expenses-layout">
+      <div style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:72px;">
+        <div class="card">
+          <div class="card-header"><div class="card-header-title"><i class="fas fa-plus-circle"></i> مصروف جديد</div></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:1rem;">
+            <div class="form-group"><label>المبلغ (DA)</label><input type="number" id="amount" placeholder="0" min="0" required></div>
+            <div class="form-group"><label>الوصف</label><input type="text" id="description" placeholder="وصف المصروف..." required></div>
+            <div class="form-group"><label>نوع المصروف</label><div class="cat-icons" id="catIcons"></div><input type="hidden" id="category" value="أخرى"></div>
+            <div class="divider"></div>
+            <div class="form-group">
+              <label>خصم المصروف من</label>
+              <div class="source-tabs">
+                <div class="source-tab active" id="tab-box" onclick="switchSource('box')"><i class="fas fa-cash-register"></i><span>صندوق مباشر</span></div>
+                <div class="source-tab" id="tab-closing" onclick="switchSource('closing')"><i class="fas fa-archive"></i><span>من تجميعة</span></div>
+              </div>
+              <input type="hidden" id="sourceType" value="box">
+            </div>
+            <div class="source-panel active" id="panel-box">
+              <div class="form-group"><label>الصندوق</label><select id="boxSelect"><option value="">اختر الصندوق...</option></select></div>
+            </div>
+            <div class="source-panel" id="panel-closing">
+              <div class="form-group"><label>التجميعة</label><select id="closingSelect"><option value="">اختر التجميعة...</option></select></div>
+            </div>
+            <button class="btn btn-primary btn-full btn-lg" id="submitBtn" onclick="submitExpense()"><i class="fas fa-plus"></i> تسجيل المصروف</button>
+            <div id="formResult"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="filter-bar">
+          <div class="form-group"><label><i class="fas fa-calendar-alt"></i> من</label><input type="date" id="filterFrom"></div>
+          <div class="form-group"><label><i class="fas fa-calendar-alt"></i> إلى</label><input type="date" id="filterTo"></div>
+          <div class="form-group"><label>الفئة</label><select id="filterCat"><option value="">كل الفئات</option></select></div>
+          <div class="form-group"><label>المصدر</label><select id="filterSource"><option value="">الكل</option><option value="box">صندوق</option><option value="closing">تجميعة</option></select></div>
+          <div><button class="btn btn-primary" onclick="loadExpenses()"><i class="fas fa-search"></i></button></div>
+          <div><button class="btn btn-outline" onclick="clearFilters()"><i class="fas fa-times"></i></button></div>
+        </div>
+
+        <div class="total-bar">
+          <div>
+            <div style="font-size:.8rem;font-weight:700;color:var(--gray);">إجمالي المصاريف</div>
+            <div style="font-size:.72rem;color:var(--gray-light);margin-top:1px;" id="periodLabel">كل الفترات</div>
+          </div>
+          <div style="font-size:1.25rem;font-weight:800;color:var(--danger);"><span id="totalAmount">0</span> DA</div>
+        </div>
+
+        <div class="table-scroll-wrap">
+          <div class="table-scroll-inner">
+            <table>
+              <thead><tr><th>#</th><th>الوصف</th><th>الفئة</th><th>المبلغ</th><th>المصدر</th><th>التاريخ</th><th></th></tr></thead>
+              <tbody id="expensesBody">
+                <tr><td colspan="7" style="text-align:center;padding:2.5rem;color:var(--gray);"><i class="fas fa-spinner fa-spin" style="font-size:1.3rem;"></i></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div id="global-loader" class="loader" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;"></div>
+<script src="scripts/api.js"></script>
+<script src="scripts/navbar.js"></script>
+<script>
+  const CATEGORY_ICONS={'تصليح / صيانة':{icon:'fas fa-tools',color:'#3b82f6'},'رواتب موظفين':{icon:'fas fa-users',color:'#8b5cf6'},'غرامة':{icon:'fas fa-exclamation-triangle',color:'#ef4444'},'إيجار مكتب':{icon:'fas fa-building',color:'#f59e0b'},'فواتير كهرباء / ماء':{icon:'fas fa-bolt',color:'#06b6d4'},'وقود سيارة':{icon:'fas fa-gas-pump',color:'#10b981'},'نقل':{icon:'fas fa-truck',color:'#6366f1'},'مستلزمات مكتب':{icon:'fas fa-box',color:'#f97316'},'أخرى':{icon:'fas fa-ellipsis-h',color:'#64748b'}};
+  let formData={boxes:[],closings:[],categories:[]};
+  async function loadFormData(){try{formData=await fetchAPI('/expenses/form-data');const catIcons=document.getElementById('catIcons');catIcons.innerHTML=formData.categories.map(cat=>{const ci=CATEGORY_ICONS[cat]||CATEGORY_ICONS['أخرى'];return`<div class="cat-icon-btn ${cat==='أخرى'?'active':''}" onclick="selectCategory('${cat}',this)" title="${cat}"><i class="${ci.icon}" style="color:${ci.color};"></i><span>${cat}</span></div>`;}).join('');const filterCat=document.getElementById('filterCat');formData.categories.forEach(c=>{filterCat.innerHTML+=`<option value="${c}">${c}</option>`;});const boxSel=document.getElementById('boxSelect');formData.boxes.forEach(b=>{boxSel.innerHTML+=`<option value="${b._id}">${b.name}</option>`;});const closingSel=document.getElementById('closingSelect');formData.closings.forEach(c=>{const date=new Date(c.closedAt).toLocaleDateString('ar-DZ');closingSel.innerHTML+=`<option value="${c._id}">${c.receiptNumber} — ${date} — ${Number(c.expectedAmount).toLocaleString('ar-DZ')} DA</option>`;});const box=getConnectedBox();if(box)document.getElementById('boxSelect').value=box._id;}catch(e){console.error(e);}}
+  function selectCategory(cat,el){document.querySelectorAll('.cat-icon-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');document.getElementById('category').value=cat;}
+  function switchSource(type){document.getElementById('sourceType').value=type;document.querySelectorAll('.source-tab').forEach(t=>t.classList.remove('active'));document.getElementById('tab-'+type).classList.add('active');document.querySelectorAll('.source-panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+type).classList.add('active');}
+  async function submitExpense(){const amount=document.getElementById('amount').value,description=document.getElementById('description').value,category=document.getElementById('category').value,sourceType=document.getElementById('sourceType').value,boxId=document.getElementById('boxSelect').value,closingId=document.getElementById('closingSelect').value,btn=document.getElementById('submitBtn'),resultDiv=document.getElementById('formResult');if(!amount||!description){resultDiv.innerHTML='<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> المبلغ والوصف مطلوبان</div>';return;}if(sourceType==='box'&&!boxId){resultDiv.innerHTML='<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> اختر الصندوق</div>';return;}if(sourceType==='closing'&&!closingId){resultDiv.innerHTML='<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> اختر التجميعة</div>';return;}btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري التسجيل...';try{const data=await fetchAPI('/expenses',{method:'POST',body:JSON.stringify({amount,description,category,sourceType,boxId,closingId})});resultDiv.innerHTML='<div class="alert alert-success"><i class="fas fa-check-circle"></i> تم تسجيل المصروف بنجاح</div>';document.getElementById('amount').value='';document.getElementById('description').value='';await loadExpenses();setTimeout(()=>{resultDiv.innerHTML='';},3000);}catch(e){resultDiv.innerHTML=`<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${e.message}</div>`;}finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-plus"></i> تسجيل المصروف';}}
+  async function loadExpenses(){const from=document.getElementById('filterFrom').value,to=document.getElementById('filterTo').value,cat=document.getElementById('filterCat').value,source=document.getElementById('filterSource').value;const params=new URLSearchParams();if(from)params.append('from',from);if(to)params.append('to',to);if(cat)params.append('category',cat);if(source)params.append('sourceType',source);const periodLabel=document.getElementById('periodLabel');periodLabel.textContent=(from||to)?`${from||'—'} إلى ${to||'—'}`:'كل الفترات';try{const data=await fetchAPI(`/expenses?${params}`);document.getElementById('totalAmount').textContent=Number(data.total||0).toLocaleString('ar-DZ');const tbody=document.getElementById('expensesBody');if(!data.expenses.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon" style="background:#fef3c7;color:#f59e0b;"><i class="fas fa-receipt"></i></div><h3>لا توجد مصاريف</h3><p>لا توجد مصاريف للفترة المحددة</p></div></td></tr>';return;}tbody.innerHTML=data.expenses.map((e,i)=>{const ci=CATEGORY_ICONS[e.category]||CATEGORY_ICONS['أخرى'];const src=e.sourceType==='box'?`<span class="src-badge box"><i class="fas fa-cash-register"></i> ${e.boxId?.name||'صندوق'}</span>`:`<span class="src-badge closing"><i class="fas fa-archive"></i> ${e.closingId?.receiptNumber||'تجميعة'}</span>`;return`<tr><td style="color:var(--gray);font-size:.78rem;">${i+1}</td><td style="font-weight:600;">${e.description}</td><td><span class="cat-badge"><i class="${ci.icon}" style="color:${ci.color};"></i>${e.category}</span></td><td style="font-weight:800;color:var(--danger);">${Number(e.amount).toLocaleString('ar-DZ')} DA</td><td>${src}</td><td style="font-size:.78rem;color:var(--gray);white-space:nowrap;">${new Date(e.createdAt).toLocaleString('ar-DZ')}</td><td><button class="del-btn" onclick="deleteExpense('${e._id}',this)"><i class="fas fa-trash"></i></button></td></tr>`;}).join('');}catch(e){console.error(e);}}
+  async function deleteExpense(id,btn){if(!confirm('حذف هذا المصروف؟'))return;try{await fetchAPI(`/expenses/${id}`,{method:'DELETE'});btn.closest('tr').remove();await loadExpenses();}catch(e){alert(e.message);}}
+  function clearFilters(){document.getElementById('filterFrom').value='';document.getElementById('filterTo').value='';document.getElementById('filterCat').value='';document.getElementById('filterSource').value='';loadExpenses();}
+  loadFormData();loadExpenses();
+</script>
+</body>
+</html>

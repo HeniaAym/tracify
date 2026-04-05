@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بحث الطرود - Tracify</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <style>
+  /* ===== CSS أصلي بدون تغيير ===== */
+  .box-bar { display:flex;align-items:center;gap:1rem;padding:.75rem 1.25rem;border-radius:var(--radius);margin-bottom:1.25rem;border:1.5px solid var(--border);background:white;box-shadow:var(--shadow); }
+  .box-bar.connected { border-color:var(--success);background:linear-gradient(135deg,#f0fdf4,white); }
+  .box-bar.disconnected { border-color:var(--warning);background:linear-gradient(135deg,#fffbeb,white); }
+  .box-status-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+  .box-status-dot.on  { background:var(--success);box-shadow:0 0 0 3px rgba(16,185,129,.2);animation:pulse 2s infinite; }
+  .box-status-dot.off { background:var(--warning); }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 3px rgba(16,185,129,.2)} 50%{box-shadow:0 0 0 6px rgba(16,185,129,.1)} }
+  .box-info { flex:1; }
+  .box-info .box-name  { font-size:.9rem;font-weight:800;color:var(--dark); }
+  .box-info .box-label { font-size:.75rem;color:var(--gray); }
+  .box-balance { font-size:1.05rem;font-weight:800;color:var(--success); }
+  .box-connect-btn { display:inline-flex;align-items:center;gap:.4rem;padding:.48rem 1.05rem;border-radius:var(--radius-sm);font-family:'Cairo',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;border:none;transition:var(--transition); }
+  .box-connect-btn.connect { background:var(--success);color:white; }
+  .box-connect-btn.connect:hover { background:#059669; }
+  .box-connect-btn.disconnect { background:var(--danger-light);color:var(--danger);border:1px solid var(--danger); }
+  .box-connect-btn.disconnect:hover { background:var(--danger);color:white; }
+  .box-modal-overlay { display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(3px);z-index:500;align-items:center;justify-content:center;padding:1.5rem; }
+  .box-modal-overlay.active { display:flex; }
+  .box-modal { background:white;border-radius:var(--radius);box-shadow:var(--shadow-lg);width:100%;max-width:400px;animation:slideUp .25s cubic-bezier(.34,1.56,.64,1);overflow:hidden; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(20px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  .box-modal-header { display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--border); }
+  .box-modal-header h3 { font-size:1rem;font-weight:800; }
+  .box-modal-body { padding:1.25rem;display:flex;flex-direction:column;gap:.75rem; }
+  .box-option { display:flex;align-items:center;gap:1rem;padding:1rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition); }
+  .box-option:hover { border-color:var(--success);background:#f0fdf4; }
+  .box-option-icon { width:38px;height:38px;background:#d1fae5;color:var(--success);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0; }
+  .close-card { width:28px;height:28px;background:none;border:1px solid var(--border);color:var(--gray);border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:var(--transition); }
+  .close-card:hover { background:var(--danger);color:white;border-color:var(--danger); }
+  .search-layout { display:grid;grid-template-columns:1fr 250px;gap:1.25rem; }
+  .search-sidebar { display:flex;flex-direction:column;gap:1rem;position:sticky;top:72px; }
+  .sidebar-card { background:white;border-radius:var(--radius);border:1px solid var(--border); }
+  .sidebar-card-header { padding:.85rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;font-size:.85rem;font-weight:700;color:var(--dark); }
+  .sidebar-card-header i { color:var(--primary); }
+  .stats-mini { padding:.65rem;display:flex;flex-direction:column;gap:.45rem; }
+  .stat-item { display:flex;align-items:center;gap:.65rem;padding:.6rem .7rem;border-radius:var(--radius-sm);background:var(--light);border:1px solid var(--border); }
+  .stat-icon { width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:.82rem;flex-shrink:0; }
+  .stat-icon.green  { background:#d1fae5;color:var(--success); }
+  .stat-icon.blue   { background:#dbeafe;color:var(--primary); }
+  .stat-icon.orange { background:#fef3c7;color:var(--accent); }
+  .stat-lbl { font-size:.72rem;color:var(--gray);font-weight:600; }
+  .stat-val { font-size:1.1rem;font-weight:800;color:var(--dark);line-height:1; }
+  .recent-list { list-style:none;max-height:300px;overflow-y:auto; }
+  .recent-list li { display:flex;justify-content:space-between;align-items:center;padding:.55rem 1rem;border-bottom:1px solid var(--border);gap:.5rem; }
+  .recent-list li:last-child { border-bottom:none; }
+  .recent-list .tracking { font-family:'Courier New',monospace;font-size:.75rem;font-weight:700;color:var(--primary); }
+  .recent-list .price { background:#d1fae5;color:#065f46;padding:.18rem .5rem;border-radius:20px;font-size:.72rem;font-weight:700; }
+  #searchCards { display:flex;flex-direction:column;gap:.75rem; }
+  .search-card { background:white;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);animation:slideIn .25s ease; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+  .search-card-header { display:flex;justify-content:space-between;align-items:center;padding:.68rem 1rem;background:var(--light);border-bottom:1px solid var(--border); }
+  .search-card-header h4 { font-size:.85rem;font-weight:700;color:var(--dark);display:flex;align-items:center;gap:.45rem; }
+  .query-badge { background:#dbeafe;color:var(--primary);padding:.12rem .55rem;border-radius:20px;font-size:.78rem; }
+  .count-badge { background:var(--border);color:var(--gray);padding:.12rem .5rem;border-radius:20px;font-size:.75rem; }
+  .table-container { overflow-x:auto;max-height:270px;overflow-y:auto; }
+  .search-card table { width:100%;border-collapse:collapse;font-size:.83rem; }
+  .search-card thead th { background:white;border-bottom:2px solid var(--border);padding:.55rem .75rem;font-weight:700;color:var(--gray);font-size:.75rem;position:sticky;top:0; }
+  .search-card tbody td { padding:.6rem .75rem;border-bottom:1px solid var(--border);vertical-align:middle; }
+  .search-card tbody tr:last-child td { border-bottom:none; }
+  .search-card tbody tr:hover { background:var(--light); }
+  .blocked-notice { background:#fffbeb;border:1.5px solid var(--warning);border-radius:var(--radius);padding:1.5rem;text-align:center;margin-bottom:1rem; }
+  .empty-search { background:white;border-radius:var(--radius);border:1px solid var(--border);padding:3rem 2rem;text-align:center; }
+  .empty-search-icon { width:60px;height:60px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--primary);margin:0 auto 1rem; }
+  .search-bar-wrap { background:white;border-radius:var(--radius);border:1px solid var(--border);padding:1rem; }
+  .search-bar { display:flex;gap:.75rem;align-items:center; }
+  .search-input-wrap { flex:1;position:relative; }
+  .search-input-wrap i { position:absolute;right:1rem;top:50%;transform:translateY(-50%);color:var(--gray); }
+  .search-input-wrap input { width:100%;padding:.72rem 2.5rem .72rem 1rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Cairo',sans-serif;font-size:.875rem;background:var(--light);outline:none;transition:var(--transition); }
+  .search-input-wrap input:focus { border-color:var(--primary);background:white;box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+  .toast { position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--dark);color:white;padding:.72rem 1.4rem;border-radius:var(--radius);font-size:.875rem;font-weight:700;z-index:9999;opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--shadow-lg);white-space:nowrap; }
+  .toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+  .toast.success { background:var(--success); }
+  .toast.error   { background:var(--danger); }
+  .toast.info    { background:var(--primary); }
+  @media(max-width:900px){ .search-layout{grid-template-columns:1fr;} .search-sidebar{position:static;} }
+
+  /* ===== CSS جديد — وضع المسح والنافذة فقط ===== */
+  .scan-btn {
+    display:inline-flex; align-items:center; gap:.45rem;
+    padding:.55rem 1.1rem; border-radius:var(--radius-sm);
+    font-family:'Cairo',sans-serif; font-size:.85rem; font-weight:700;
+    cursor:pointer; border:1.5px solid var(--border);
+    background:white; color:var(--gray); transition:var(--transition);
+    white-space:nowrap;
+  }
+  .scan-btn:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
+  .scan-btn.active { background:linear-gradient(135deg,var(--success),var(--success-dark)); color:white; border-color:transparent; box-shadow:0 4px 14px rgba(5,150,105,.25); }
+  .scan-blink { width:8px;height:8px;background:white;border-radius:50%;display:inline-block;animation:blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  .scan-badge {
+    display:none; align-items:center; gap:.5rem; margin-top:.75rem;
+    padding:.55rem 1rem; border-radius:var(--radius-sm);
+    background:var(--success-light); border:1.5px solid var(--success-border);
+    color:var(--success); font-size:.82rem; font-weight:700;
+    animation:pulseBorder 2s infinite;
+  }
+  @keyframes pulseBorder { 0%,100%{box-shadow:0 0 0 0 rgba(5,150,105,.2)} 50%{box-shadow:0 0 0 5px rgba(5,150,105,0)} }
+
+  /* نافذة المسح */
+  .scan-modal {
+    display:none; position:fixed; inset:0;
+    background:rgba(15,23,42,.65); backdrop-filter:blur(6px);
+    z-index:600; align-items:center; justify-content:center;
+  }
+  .scan-modal-box {
+    background:white; border-radius:var(--radius);
+    padding:2.5rem 2rem; text-align:center;
+    width:100%; max-width:400px; margin:1rem;
+    box-shadow:var(--shadow-lg);
+    animation:popIn .3s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+
+  .scan-modal-icon {
+    width:76px; height:76px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 1.1rem; font-size:2.4rem;
+    background:#f1f5f9; color:var(--gray);
+  }
+  .scan-modal-icon.success { background:var(--success-light); color:var(--success); }
+  .scan-modal-icon.error   { background:var(--danger-light);  color:var(--danger); }
+
+  .scan-modal-tracking { font-family:'Courier New',monospace; font-size:.95rem; font-weight:900; color:var(--primary); margin-bottom:.4rem; }
+  .scan-modal-customer { font-size:1.35rem; font-weight:900; color:var(--dark); margin-bottom:.3rem; }
+  .scan-modal-phone    { font-size:.9rem; color:var(--gray); margin-bottom:.85rem; }
+  .scan-modal-price    { font-size:2.6rem; font-weight:900; color:var(--success); letter-spacing:-.02em; margin-bottom:.6rem; }
+  .scan-modal-label    { font-size:1rem; font-weight:800; }
+  .scan-modal-label.success { color:var(--success); }
+  .scan-modal-label.error   { color:var(--danger); }
+  </style>
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+<div class="container">
+    <div class="page-header">
+      <div class="page-header-icon" style="background:linear-gradient(135deg,#2563eb,#06b6d4);"><i class="fas fa-search"></i></div>
+      <div><h1>بحث عن طرد وتأكيد الدفع</h1><p>ابحث برقم التتبع أو الهاتف أو اسم العميل</p></div>
+    </div>
+
+    <div class="box-bar disconnected" id="boxBar">
+      <div class="box-status-dot off" id="boxDot"></div>
+      <div class="box-info">
+        <div class="box-name"  id="boxName">غير متصل</div>
+        <div class="box-label" id="boxLabel">يجب الاتصال بصندوق المال لتأكيد الدفع</div>
+      </div>
+      <div class="box-balance" id="boxBalance" style="display:none;"></div>
+      <button class="box-connect-btn connect" id="boxBtn" onclick="openBoxModal()">
+        <i class="fas fa-plug"></i> اتصال بالصندوق
+      </button>
+    </div>
+
+    <div class="blocked-notice" id="blockedNotice">
+      <i class="fas fa-lock" style="font-size:1.4rem;color:var(--warning);display:block;margin-bottom:.5rem;"></i>
+      <strong>يجب الاتصال بصندوق المال أولاً</strong>
+      <p style="font-size:.8rem;color:var(--gray);margin-top:.3rem;">اضغط "اتصال بالصندوق" للبدء</p>
+    </div>
+
+    <div class="search-layout">
+      <main style="display:flex;flex-direction:column;gap:1rem;" id="mainContent">
+        <div class="search-bar-wrap">
+          <div class="search-bar">
+            <div class="search-input-wrap">
+              <i class="fas fa-search"></i>
+              <input type="text" id="searchInput" placeholder="رقم التتبع، الهاتف، اسم العميل...">
+            </div>
+            <button id="searchBtn" class="btn btn-primary"><i class="fas fa-search"></i> بحث</button>
+            <!-- زر وضع المسح — جديد -->
+            <button id="scanModeBtn" class="scan-btn" onclick="toggleScanMode()">
+              <i class="fas fa-barcode"></i> وضع المسح
+            </button>
+          </div>
+          <!-- بادج وضع المسح — جديد -->
+          <div class="scan-badge" id="scanBadge">
+            <span class="scan-blink" style="background:var(--success);"></span>
+            وضع المسح مفعّل — وجّه القارئ للباركود
+          </div>
+        </div>
+        <div class="empty-search" id="emptyState">
+          <div class="empty-search-icon"><i class="fas fa-box-open"></i></div>
+          <h3 style="font-size:.95rem;font-weight:700;color:var(--dark);margin-bottom:.3rem;">ابدأ البحث</h3>
+          <p style="font-size:.8rem;color:var(--gray);">أدخل رقم التتبع أو الهاتف أو اسم العميل</p>
+        </div>
+        <div id="searchCards"></div>
+      </main>
+
+      <aside class="search-sidebar">
+        <div class="sidebar-card">
+          <div class="sidebar-card-header"><i class="fas fa-chart-bar"></i> ملخص اليوم</div>
+          <div class="stats-mini">
+            <div class="stat-item">
+              <div class="stat-icon green"><i class="fas fa-coins"></i></div>
+              <div><div class="stat-lbl">التحصيل</div><div class="stat-val"><span id="total-collected">0</span> <span style="font-size:.65rem;color:var(--gray);">DA</span></div></div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon blue"><i class="fas fa-check-circle"></i></div>
+              <div><div class="stat-lbl">مدفوعة</div><div class="stat-val" id="paid-count">0</div></div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+              <div><div class="stat-lbl">معلقة</div><div class="stat-val" id="pending-count">0</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- عنوان القائمة تغيّر من "آخر 15" إلى "كل المسلمة اليوم" -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-header"><i class="fas fa-history"></i> كل المسلمة اليوم</div>
+          <ul class="recent-list" id="recent-list">
+            <li style="justify-content:center;color:var(--gray);font-size:.78rem;">اتصل بالصندوق أولاً</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+
+    <!-- قسم التسليم الجماعي — جديد -->
+    <div style="margin-top:1.25rem;">
+      <div class="search-bar-wrap" id="bulk-deliver-section" style="display:none;">
+        <h3 style="font-size:.95rem;font-weight:800;color:var(--dark);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem;">
+          <i class="fas fa-layer-group" style="color:var(--primary);"></i> تسليم جماعي من Excel
+        </h3>
+        <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;">
+          <div class="file-drop" id="bulkFileDrop" style="flex:1;min-width:200px;padding:.95rem 1.5rem;margin:0;">
+            <input type="file" id="bulkFileInput" accept=".xlsx,.xls">
+            <div><i class="fas fa-upload" style="margin-left:.5rem;color:var(--primary);"></i>
+            <span id="bulkFileLabel">اختر ملف Excel</span></div>
+          </div>
+          <button class="btn btn-primary" id="bulkUploadBtn" onclick="bulkDeliverUpload()">
+            <i class="fas fa-paper-plane"></i> رفع وتنفيذ
+          </button>
+        </div>
+        <div id="bulk-result" style="margin-top:1rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="box-modal-overlay" id="boxModal">
+  <div class="box-modal">
+    <div class="box-modal-header">
+      <h3><i class="fas fa-cash-register" style="color:var(--success);margin-left:.5rem;"></i> اختر صندوق المال</h3>
+      <button class="close-card" onclick="closeBoxModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="box-modal-body" id="boxList">
+      <div style="text-align:center;color:var(--gray);padding:1rem;"><i class="fas fa-spinner fa-spin"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة المسح المنبثقة — جديدة -->
+<div class="scan-modal" id="scanModal">
+  <div class="scan-modal-box" id="scanModalContent"></div>
+</div>
+
+<div id="global-loader" class="loader" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;"></div>
+<script src="scripts/api.js"></script>
+<script src="scripts/navbar.js"></script>
+<script src="scripts/search.js"></script>
+
+</body></html>

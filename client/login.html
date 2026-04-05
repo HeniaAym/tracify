@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - Tracify</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --primary-light: #eff6ff;
+      --success: #059669;
+      --warning: #d97706;
+      --warning-light: #fffbeb;
+      --warning-border: #fcd34d;
+      --danger: #dc2626;
+      --danger-light: #fff1f2;
+      --text-dark: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --border: #e8edf2;
+      --bg-body: #f1f5f9;
+      --white: #ffffff;
+      --gray: #64748b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: var(--bg-body);
+      color: var(--text-dark);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .login-card {
+      background: var(--white);
+      border-radius: 18px;
+      padding: 2.8rem 2.5rem 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 4px 24px rgba(15,23,42,0.08);
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .form-group {
+      margin-bottom: 1.3rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 0.5rem;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.9rem 1.1rem;
+      border: 1.5px solid #d1d9e0;
+      border-radius: 13px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 1rem;
+      color: var(--text-dark);
+      background: var(--white);
+      transition: all 0.2s;
+      outline: none;
+      font-weight: 600;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .btn {
+      width: 100%;
+      padding: 0.95rem;
+      border: none;
+      border-radius: 13px;
+      font-family: 'Cairo', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.28);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(37,99,235,0.32);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .alert {
+      padding: 0.9rem 1.1rem;
+      border-radius: 13px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 1rem;
+    }
+    .alert-danger {
+      background: var(--danger-light);
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      border-right: 4px solid var(--danger);
+    }
+    .alert-warning {
+      background: var(--warning-light);
+      color: #92400e;
+      border: 1px solid var(--warning-border);
+      border-right: 4px solid var(--warning);
+    }
+    .station-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border: 1px solid #bfdbfe;
+      margin-bottom: 1.2rem;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--gray);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.2s;
+      margin-top: 1rem;
+    }
+    .back-link:hover { color: var(--primary); }
+    .password-wrapper {
+      position: relative;
+    }
+    .password-toggle {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      padding: 0.3rem;
+    }
+    .password-toggle:hover { color: var(--primary); }
+    .hidden { display: none !important; }
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-left: 0.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .step { animation: fadeUp 0.3s ease; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-logo">
+      <img
+        src="/image/logo.png"
+        alt="Tracify"
+        style="height: 80px; width: auto; object-fit: contain;"
+      />
+    </div>
+
+    <!-- الخطأ -->
+    <div id="alert-danger" class="alert alert-danger"><i class="fas fa-exclamation-circle"></i><span id="alert-text"></span></div>
+
+    <!-- تحذير الاشتراك -->
+    <div id="alert-warning" class="alert alert-warning"><i class="fas fa-clock"></i><span id="warning-text"></span></div>
+
+    <!-- الخطوة 1: اختيار المحطة -->
+    <div id="step-1" class="step">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:1.2rem;text-align:center;">اختر محطتك</h2>
+      <div class="form-group">
+        <label for="station-select">المحطة</label>
+        <select id="station-select">
+          <option value="">— جاري التحميل —</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="goToStep2()" style="margin-top:0.5rem;">متابعة</button>
+    </div>
+
+    <!-- الخطوة 2: تسجيل الدخول -->
+    <div id="step-2" class="step hidden">
+      <div style="text-align:center;">
+        <div class="station-badge" id="station-badge">
+          <i class="fas fa-building"></i>
+          <span id="selected-station-name"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="username"><i class="fas fa-user"></i> اسم المستخدم</label>
+        <input type="text" id="username" placeholder="أدخل اسم المستخدم" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label for="password"><i class="fas fa-lock"></i> كلمة المرور</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" placeholder="أدخل كلمة المرور" autocomplete="current-password">
+          <button class="password-toggle" type="button" onclick="togglePassword()">
+            <i class="fas fa-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="login-btn" onclick="doLogin()">
+        تسجيل الدخول
+      </button>
+      <a class="back-link" onclick="goToStep1()"><i class="fas fa-arrow-right"></i> رجوع لتغيير المحطة</a>
+    </div>
+  </div>
+
+  <script>
+    const API = `${window.location.protocol}//${window.location.hostname}:3000/api`;
+    let stations = [];
+    let selectedStationId = '';
+
+    // تحميل المحطات
+    async function loadStations() {
+      try {
+        const res = await fetch(`${API}/auth/stations`);
+        const data = await res.json();
+        stations = data.stations || [];
+        const select = document.getElementById('station-select');
+        if (stations.length === 0) {
+          select.innerHTML = '<option value="">— لا توجد محطات نشطة —</option>';
+          return;
+        }
+        select.innerHTML = '<option value="">— اختر المحطة —</option>' +
+          stations.map(s => `<option value="${s._id}">${s.name}</option>`).join('');
+      } catch (e) {
+        document.getElementById('station-select').innerHTML = '<option value="">— خطأ في التحميل —</option>';
+      }
+    }
+    loadStations();
+
+    function goToStep2() {
+      select = document.getElementById('station-select');
+      selectedStationId = select.value;
+      if (!selectedStationId) {
+        showError('Please select a station');
+        return;
+      }
+      const station = stations.find(s => s._id === selectedStationId);
+      document.getElementById('selected-station-name').textContent = station.name;
+
+      // تحذير الاشتراك القريب
+      const warnEl = document.getElementById('alert-warning');
+      if (station.subscriptionEnd) {
+        const daysLeft = Math.floor((new Date(station.subscriptionEnd) - new Date()) / 86400000);
+        if (daysLeft <= 7 && daysLeft > 0) {
+          document.getElementById('warning-text').textContent = `انتباه: يتبقى ${daysLeft} أيام على انتهاء الاشتراك`;
+          warnEl.style.display = 'flex';
+        } else if (daysLeft <= 0) {
+          document.getElementById('warning-text').textContent = 'انتباه: انتهى الاشتراك';
+          warnEl.style.display = 'flex';
+        } else {
+          warnEl.style.display = 'none';
+        }
+      } else {
+        warnEl.style.display = 'none';
+      }
+
+      document.getElementById('step-1').classList.add('hidden');
+      document.getElementById('step-2').classList.remove('hidden');
+      document.getElementById('username').focus();
+    }
+
+    function goToStep1() {
+      document.getElementById('step-1').classList.remove('hidden');
+      document.getElementById('step-2').classList.add('hidden');
+      document.getElementById('alert-danger').style.display = 'none';
+      document.getElementById('alert-warning').style.display = 'none';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('alert-danger');
+      document.getElementById('alert-text').textContent = msg;
+      el.style.display = 'flex';
+    }
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const icon = document.getElementById('eye-icon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    }
+
+    async function doLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) {
+        showError('يرجى إدخال اسم المستخدم وكلمة المرور');
+        return;
+      }
+
+      const btn = document.getElementById('login-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> جاري التحقق...';
+      document.getElementById('alert-danger').style.display = 'none';
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, stationId: selectedStationId })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || 'خطأ في تسجيل الدخول');
+        } else {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          window.location.href = '/';
+        }
+      } catch (err) {
+        showError('خطأ في الاتصال بالخادم');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'تسجيل الدخول';
+      }
+    }
+
+    // Enter key
+    document.getElementById('password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+    document.getElementById('username').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        goToStep2();
+      }
+    });
+  </script>
+</body>
+</html>

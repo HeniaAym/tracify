@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تعديل الطرود - Tracify</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <style>
+    .edit-card {
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      animation: fadeUp .3s ease;
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+    .edit-card-header {
+      padding: 1rem 1.4rem;
+      background: linear-gradient(135deg, var(--bg-light), white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .edit-card-title {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-size: var(--text-md);
+      font-weight: 900;
+      color: var(--text-dark);
+    }
+
+    .edit-card-title i { color: var(--primary); }
+
+    .tracking-display {
+      font-family: 'Courier New', monospace;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--primary);
+      background: var(--primary-light);
+      border: 1px solid var(--primary-border);
+      padding: .35rem .85rem;
+      border-radius: var(--radius-pill);
+    }
+
+    .edit-form {
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .edit-form .form-group.full { grid-column: 1 / -1; }
+
+    .field-locked {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .field-locked label {
+      font-size: var(--text-sm);
+      font-weight: 800;
+      color: var(--text-body);
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .field-locked .lock-icon { color: var(--text-muted); font-size: .8rem; }
+
+    .field-locked .locked-value {
+      padding: .95rem 1.1rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-light);
+      color: var(--text-muted);
+      font-family: 'Courier New', monospace;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      cursor: not-allowed;
+    }
+
+    .edit-actions {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-light);
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+    }
+
+    .status-badge-edit {
+      margin-right: auto;
+    }
+
+    /* جدول النتائج */
+    .results-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+    .results-table thead th {
+      background: var(--bg-light);
+      border-bottom: 2px solid var(--border);
+      padding: .9rem 1.1rem;
+      font-weight: 800;
+      color: var(--text-secondary);
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      text-align: right;
+      white-space: nowrap;
+    }
+    .results-table tbody td {
+      padding: .85rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-body);
+      vertical-align: middle;
+    }
+    .results-table tbody tr:last-child td { border-bottom: none; }
+    .results-table tbody tr:hover { background: var(--bg-light); }
+
+    .btn-edit-row {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .45rem 1rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid var(--primary-border);
+      border-radius: var(--radius-pill);
+      font-family: 'Cairo', sans-serif;
+      font-size: var(--text-xs);
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--tr);
+    }
+    .btn-edit-row:hover { background: var(--primary); color: white; }
+
+    /* حالة فارغة */
+    .empty-edit {
+      text-align: center;
+      padding: 4rem 2rem;
+    }
+    .empty-edit-icon {
+      width: 80px; height: 80px;
+      background: var(--bg-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: var(--text-muted);
+      margin: 0 auto 1.25rem;
+      border: 1.5px solid var(--border);
+    }
+
+    /* modal التعديل */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.55);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+      background: white;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      width: 100%;
+      max-width: 480px;
+      overflow: hidden;
+      animation: slideUp .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(20px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, var(--bg-light), white);
+    }
+    .modal-head-title {
+      font-size: var(--text-md);
+      font-weight: 900;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    .modal-head-title i { color: var(--warning); }
+    .modal-body-form {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+    .modal-tracking-info {
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: .85rem 1.1rem;
+      font-family: 'Courier New', monospace;
+      font-size: var(--text-sm);
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .modal-foot {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-light);
+      display: flex;
+      gap: .75rem;
+      justify-content: flex-end;
+    }
+    .close-modal-btn {
+      width: 34px; height: 34px;
+      border: 1.5px solid var(--border);
+      background: none;
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted);
+      font-size: .9rem;
+      transition: var(--tr);
+    }
+    .close-modal-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+    /* شريط البحث */
+    .search-wrap {
+      display: flex;
+      gap: .85rem;
+      margin-bottom: 1.5rem;
+    }
+    .search-wrap .inp-wrap {
+      flex: 1;
+      position: relative;
+    }
+    .search-wrap .inp-wrap i {
+      position: absolute;
+      right: 1.1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 1rem 2.75rem 1rem 1.1rem;
+      border: 1.5px solid var(--border-dark);
+      border-radius: var(--radius-sm);
+      font-family: 'Cairo', sans-serif;
+      font-size: var(--text-base);
+      outline: none;
+      transition: var(--tr);
+      background: white;
+    }
+    .search-wrap input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.1);
+    }
+
+    @media(max-width: 640px) {
+      .edit-form { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+<div class="container">
+
+    <div class="page-header">
+      <div class="page-header-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+        <i class="fas fa-edit"></i>
+      </div>
+      <div>
+        <h1>تعديل بيانات الطرود</h1>
+        <p>تعديل السعر والاسم والهاتف — رقم التتبع لا يمكن تعديله</p>
+      </div>
+    </div>
+
+    <!-- شريط البحث -->
+    <div class="search-wrap">
+      <div class="inp-wrap">
+        <i class="fas fa-search"></i>
+        <input type="text" id="editSearch" placeholder="ابحث برقم التتبع أو اسم العميل أو الهاتف...">
+      </div>
+      <button class="btn btn-primary" onclick="doSearch()">
+        <i class="fas fa-search"></i> بحث
+      </button>
+      <button class="btn btn-ghost" onclick="loadAll()">
+        <i class="fas fa-list"></i> عرض الكل
+      </button>
+    </div>
+
+    <!-- النتائج -->
+    <div class="card" id="resultsCard">
+      <div class="card-header">
+        <div class="card-header-title">
+          <i class="fas fa-boxes"></i>
+          <span id="resultsTitle">كل الطرود</span>
+        </div>
+        <span id="resultsCount" style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>رقم التتبع</th>
+              <th>العميل</th>
+              <th>الهاتف</th>
+              <th>السعر</th>
+              <th>الحالة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody">
+            <tr>
+              <td colspan="6">
+                <div class="empty-edit">
+                  <div class="empty-edit-icon"><i class="fas fa-search"></i></div>
+                  <h3 style="font-size:var(--text-lg);font-weight:900;color:var(--text-dark);margin-bottom:.4rem;">ابدأ بالبحث</h3>
+                  <p style="font-size:var(--text-sm);color:var(--text-secondary);">أو اضغط "عرض الكل" لتصفح جميع الطرود</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal التعديل -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-head-title">
+        <i class="fas fa-pen"></i> تعديل الطرد
+      </div>
+      <button class="close-modal-btn" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body-form">
+      <div>
+        <label style="font-size:var(--text-xs);font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:.35rem;margin-bottom:.5rem;">
+          <i class="fas fa-lock" style="color:var(--text-faint);"></i> رقم التتبع (غير قابل للتعديل)
+        </label>
+        <div class="modal-tracking-info" id="modalTracking">—</div>
+      </div>
+      <div class="form-group">
+        <label>اسم العميل</label>
+        <input type="text" id="editCustomer" placeholder="اسم العميل">
+      </div>
+      <div class="form-group">
+        <label>رقم الهاتف</label>
+        <input type="text" id="editPhone" placeholder="0xxxxxxxxx">
+      </div>
+      <div class="form-group">
+        <label>السعر (DA)</label>
+        <input type="number" id="editPrice" placeholder="0" min="0">
+      </div>
+      <div id="editResult"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveEdit()">
+        <i class="fas fa-save"></i> حفظ التعديلات
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="global-loader" class="loader" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;"></div>
+
+<script src="scripts/api.js"></script>
+<script src="scripts/navbar.js"></script>
+<script>
+  const HOST = `${window.location.protocol}//${window.location.hostname}:3000`;
+  let currentParcelId = null;
+
+  // ===== بحث =====
+  async function doSearch() {
+    const q = document.getElementById('editSearch').value.trim();
+    if (!q) { alert('أدخل كلمة بحث'); return; }
+    await loadParcels(q);
+  }
+
+  async function loadAll() {
+    document.getElementById('editSearch').value = '';
+    await loadParcels('');
+  }
+
+  async function loadParcels(query) {
+    const tbody = document.getElementById('resultsBody');
+    const title = document.getElementById('resultsTitle');
+    const count = document.getElementById('resultsCount');
+
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">
+      <i class="fas fa-spinner fa-spin" style="font-size:1.5rem;"></i></td></tr>`;
+
+    try {
+      const url = query
+        ? `${HOST}/api/parcels/search?q=${encodeURIComponent(query)}`
+        : `${HOST}/api/parcels`;
+
+      const res     = await fetch(url);
+      const parcels = await res.json();
+
+      title.textContent = query ? `نتائج: "${query}"` : 'كل الطرود';
+      count.textContent = `${parcels.length} طرد`;
+
+      if (!parcels.length) {
+        tbody.innerHTML = `<tr><td colspan="6">
+          <div class="empty-edit">
+            <div class="empty-edit-icon"><i class="fas fa-box-open"></i></div>
+            <h3 style="font-size:var(--text-lg);font-weight:900;color:var(--text-dark);margin-bottom:.4rem;">لا توجد نتائج</h3>
+            <p style="font-size:var(--text-sm);color:var(--text-secondary);">جرب كلمة بحث مختلفة</p>
+          </div></td></tr>`;
+        return;
+      }
+
+      const statusMap = {
+        pending:  { text: 'معلق',    cls: 'badge-pending' },
+        paid:     { text: 'مُسلَّم', cls: 'badge-paid' },
+        returned: { text: 'مرتجع',   cls: 'badge-returned' },
+      };
+
+      tbody.innerHTML = parcels.map(p => {
+        const s = statusMap[p.status] || { text: p.status, cls: 'badge-gray' };
+        return `<tr>
+          <td><a href="https://suivi.ecotrack.dz/fr/suivi/traking/${p.tracking}" target="_blank" style="font-family:'Courier New',monospace;font-weight:700;color:var(--primary);text-decoration:none;">${p.tracking} <i class="fas fa-external-link-alt" style="font-size:.7rem;opacity:.6;"></i></a></td>
+          <td style="font-weight:600;">${p.customer}</td>
+          <td>${p.phone}</td>
+          <td style="font-weight:800;">${Number(p.price).toLocaleString('ar-DZ')} DA</td>
+          <td><span class="badge ${s.cls}">${s.text}</span></td>
+          <td>
+            <button class="btn-edit-row" onclick="openModal('${p._id}','${p.tracking}','${p.customer}','${p.phone}',${p.price})">
+              <i class="fas fa-pen"></i> تعديل
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="6">
+        <div class="empty-edit">
+          <div class="empty-edit-icon" style="background:var(--danger-light);color:var(--danger);border-color:var(--danger-border);">
+            <i class="fas fa-exclamation-circle"></i>
+          </div>
+          <h3 style="font-size:var(--text-md);font-weight:900;color:var(--danger);">خطأ في تحميل البيانات</h3>
+          <p style="font-size:var(--text-sm);color:var(--text-secondary);">${e.message}</p>
+        </div></td></tr>`;
+    }
+  }
+
+  // ===== modal =====
+  function openModal(id, tracking, customer, phone, price) {
+    currentParcelId = id;
+    document.getElementById('modalTracking').textContent = tracking;
+    document.getElementById('editCustomer').value = customer;
+    document.getElementById('editPhone').value    = phone;
+    document.getElementById('editPrice').value    = price;
+    document.getElementById('editResult').innerHTML = '';
+    document.getElementById('editModal').classList.add('active');
+    document.getElementById('editCustomer').focus();
+  }
+
+  function closeModal() {
+    document.getElementById('editModal').classList.remove('active');
+    currentParcelId = null;
+  }
+
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  // ===== حفظ =====
+  async function saveEdit() {
+    if (!currentParcelId) return;
+
+    const customer = document.getElementById('editCustomer').value.trim();
+    const phone    = document.getElementById('editPhone').value.trim();
+    const price    = document.getElementById('editPrice').value;
+    const result   = document.getElementById('editResult');
+    const btn      = document.getElementById('saveBtn');
+
+    if (!customer || !phone || !price) {
+      result.innerHTML = `<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> جميع الحقول مطلوبة</div>`;
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
+
+    try {
+      const res = await fetch(`${HOST}/api/parcels/${currentParcelId}`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ customer, phone, price: Number(price) })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'فشل التعديل');
+
+      result.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> تم الحفظ بنجاح</div>`;
+
+      // تحديث الجدول
+      setTimeout(() => {
+        closeModal();
+        const q = document.getElementById('editSearch').value.trim();
+        loadParcels(q);
+      }, 1000);
+
+    } catch(e) {
+      result.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${e.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> حفظ التعديلات';
+    }
+  }
+
+  // ===== Enter للبحث =====
+  document.getElementById('editSearch').addEventListener('keypress', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+</script>
+</body>
+</html>

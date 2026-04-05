@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كل التجميعات - Tracify</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <style>
+    .filter-bar {
+      display: flex; gap: .75rem; flex-wrap: wrap; align-items: center;
+      padding: 1rem; background: var(--light); border-radius: var(--radius);
+      margin-bottom: 1.25rem;
+    }
+    .filter-bar input, .filter-bar select {
+      padding: .5rem .75rem; border: 1px solid var(--border); border-radius: 6px;
+      font-family: 'Cairo', sans-serif; font-size: .85rem;
+      background: white;
+    }
+    .filter-bar input:focus, .filter-bar select:focus { border-color: var(--primary); outline: none; }
+    .summary-bar {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      background: white; border-top: 2px solid var(--primary); padding: .75rem 2rem;
+      justify-content: space-between; align-items: center; z-index: 1000;
+      box-shadow: 0 -4px 20px rgba(0,0,0,.1);
+    }
+    .summary-bar.show { display: flex; }
+    .summary-info { display: flex; gap: 1.5rem; align-items: center; font-weight: 700; }
+    .date-header {
+      background: #f0f0ff; padding: .4rem 1rem; font-weight: 800; font-size: .82rem;
+      color: var(--primary); border-radius: var(--radius-sm); margin-top: .5rem;
+    }
+    .type-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .15rem .5rem; border-radius: 4px; font-size: .75rem; font-weight: 700;
+    }
+    .type-cash { background: #ede9fe; color: #7c3aed; }
+    .type-driver { background: #e0f2fe; color: #0891b2; }
+  </style>
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+<div class="container">
+  <div class="page-header">
+    <div class="page-header-icon" style="background:linear-gradient(135deg,#7c3aed,#06b6d4);"><i class="fas fa-list-alt"></i></div>
+    <div><h1>كل التجميعات</h1><p>عرض وإدارة كل عمليات التجميع وتصفية السائقين</p></div>
+  </div>
+
+  <!-- فلاتر -->
+  <div class="filter-bar">
+    <input type="date" id="filter-from" title="من تاريخ">
+    <input type="date" id="filter-to" title="إلى تاريخ">
+    <select id="filter-type">
+      <option value="all">كل الأنواع</option>
+      <option value="cash">💰 صناديق</option>
+      <option value="driver">🚗 سائقين</option>
+    </select>
+    <input type="text" id="filter-search" placeholder="بحث بالمرجع..." style="width:170px;">
+    <button class="btn btn-primary" onclick="loadClosings()" style="padding:.5rem 1rem;font-size:.85rem;"><i class="fas fa-search"></i> بحث</button>
+  </div>
+
+  <!-- جدول التجميعات -->
+  <div class="card">
+    <div class="table-wrapper" style="border:none;border-radius:0 0 var(--radius) var(--radius);">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:35px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+            <th>النوع</th>
+            <th>المرجع</th>
+            <th>التاريخ</th>
+            <th>عدد الطرود</th>
+            <th>المبلغ</th>
+            <th>المسؤول/المنفذ</th>
+            <th>المستخدم</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody id="closings-tbody">
+          <tr><td colspan="9"><div class="empty-state"><div class="empty-state-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-list-check"></i></div><h3>لا توجد تجميعات</h3><p>ستظهر التجميعات هنا بعد التحميل</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- شريط الملخص -->
+<div class="summary-bar" id="summary-bar">
+  <div class="summary-info">
+    <span><i class="fas fa-layer-group"></i> عدد التجميعات: <strong id="summary-count">0</strong></span>
+    <span><i class="fas fa-coins"></i> المجموع: <strong id="summary-total">0</strong> DA</span>
+  </div>
+  <button class="btn btn-primary" onclick="exportPDF()" style="padding:.45rem .9rem;font-size:.85rem;"><i class="fas fa-file-pdf"></i> تصدير PDF</button>
+</div>
+
+<div id="global-loader" class="loader" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;"></div>
+<script src="scripts/api.js"></script>
+<script src="scripts/navbar.js"></script>
+
+<script>
+let allClosings = [];
+let selectedIds = new Set();
+
+// ==================================================
+// تحميل التجميعات
+// ==================================================
+async function loadClosings() {
+  let url = '/all-closings?';
+  const from = document.getElementById('filter-from').value;
+  const to = document.getElementById('filter-to').value;
+  const type = document.getElementById('filter-type').value;
+  const search = document.getElementById('filter-search').value;
+
+  if (from) url += `from=${from}&`;
+  if (to) url += `to=${to}&`;
+  if (type !== 'all') url += `type=${type}&`;
+  if (search) url += `search=${encodeURIComponent(search)}&`;
+
+  try {
+    allClosings = await fetchAPI(url) || [];
+    renderClosings();
+  } catch (e) { console.error(e); }
+}
+
+// ==================================================
+// عرض التجميعات
+// ==================================================
+function renderClosings() {
+  const tbody = document.getElementById('closings-tbody');
+  if (!allClosings.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-state-icon" style="background:#f0fdf4;color:#16a34a;"><i class="fas fa-list-check"></i></div><h3>لا توجد تجميعات</h3><p>لا توجد نتائج مطابقة للفلاتر</p></div></td></tr>';
+    return;
+  }
+
+  let html = '';
+  let lastDate = '';
+  const arOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+
+  allClosings.forEach((c, idx) => {
+    const dateStr = new Date(c.date).toLocaleDateString('ar-DZ', arOptions);
+    if (dateStr !== lastDate) {
+      html += `<tr><td colspan="9"><div class="date-header">${dateStr}</div></td></tr>`;
+      lastDate = dateStr;
+    }
+
+    const isSelected = selectedIds.has(c._id);
+    const typeBadge = c.type === 'cash'
+      ? '<span class="type-badge type-cash">💰 صندوق</span>'
+      : '<span class="type-badge type-driver">🚗 سائق</span>';
+
+    const amountDisplay = `${Number(c.amount || 0).toLocaleString('ar-DZ')} DA`;
+
+    html += `
+      <tr style="${isSelected ? 'background:#f0f0ff;' : ''}">
+        <td><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelect('${c._id}')"></td>
+        <td>${typeBadge}</td>
+        <td><span style="font-family:monospace;font-weight:800;font-size:.85rem;background:#f1f5f9;padding:.2rem .5rem;border-radius:4px;">${c.reference}</span></td>
+        <td style="font-size:.82rem;color:var(--gray);">${new Date(c.date).toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' })}</td>
+        <td>${c.parcelsCount || 0}</td>
+        <td style="font-weight:700;">${amountDisplay}</td>
+        <td>${c.supervisor || '—'}</td>
+        <td>${c.operator || c.driver || '—'}</td>
+        <td><span class="badge ${c.status === 'متطابق' || c.status === 'مكتمل' ? 'badge-success' : c.status === 'زيادة' ? 'badge-info' : 'badge-danger'}">${c.status || '—'}</span></td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+
+// ==================================================
+// اختيار الكل
+// ==================================================
+function toggleSelectAll() {
+  const checked = document.getElementById('selectAll').checked;
+  if (checked) {
+    allClosings.forEach(c => selectedIds.add(c._id));
+  } else {
+    selectedIds.clear();
+  }
+  updateSummary();
+  renderClosings();
+}
+
+// ==================================================
+// اختيار فردي
+// ==================================================
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  updateSummary();
+  renderClosings();
+}
+
+// ==================================================
+// تحديث الملخص
+// ==================================================
+function updateSummary() {
+  const bar = document.getElementById('summary-bar');
+  document.getElementById('selectAll').checked = allClosings.length > 0 && selectedIds.size === allClosings.length;
+
+  if (selectedIds.size === 0) {
+    bar.classList.remove('show');
+    return;
+  }
+
+  bar.classList.add('show');
+  document.getElementById('summary-count').textContent = selectedIds.size;
+
+  let total = 0;
+  allClosings.filter(c => selectedIds.has(c._id)).forEach(c => total += (c.amount || 0));
+  document.getElementById('summary-total').textContent = Number(total).toLocaleString('ar-DZ');
+}
+
+// ==================================================
+// تصدير PDF — محسّن مع لوغو وتصميم احترافي
+// ==================================================
+async function exportPDF() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const selected = allClosings.filter(c => selectedIds.has(c._id));
+
+  // تحميل اللوغو كـ base64
+  let logoBase64 = '';
+  try {
+    const resp = await fetch('/image/logo.png');
+    const blob = await resp.blob();
+    logoBase64 = await new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    console.warn('Logo not found, skipping.', e);
+  }
+
+  const logoTag = logoBase64
+    ? `<img src="${logoBase64}" alt="Logo" style="height:56px;object-fit:contain;">`
+    : `<span style="font-size:1.4rem;font-weight:900;color:#7c3aed;letter-spacing:-1px;">Tracify</span>`;
+
+  let total = selected.reduce((a, c) => a + (c.amount || 0), 0);
+  const totalParcels = selected.reduce((a, c) => a + (c.parcelsCount || 0), 0);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('ar-DZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+
+  let rowsHtml = '';
+  selected.forEach((c, i) => {
+    const type = c.type === 'cash'
+      ? `<span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.78rem;">💰 صندوق</span>`
+      : `<span style="background:#e0f2fe;color:#0891b2;padding:2px 8px;border-radius:4px;font-weight:700;font-size:.78rem;">🚗 سائق</span>`;
+
+    const statusColor = (c.status === 'متطابق' || c.status === 'مكتمل')
+      ? '#16a34a' : c.status === 'زيادة' ? '#0891b2' : '#dc2626';
+
+    const statusBg = (c.status === 'متطابق' || c.status === 'مكتمل')
+      ? '#f0fdf4' : c.status === 'زيادة' ? '#e0f2fe' : '#fef2f2';
+
+    rowsHtml += `
+      <tr style="background:${i % 2 === 0 ? '#ffffff' : '#faf8ff'};">
+        <td style="text-align:center;color:#94a3b8;font-size:.78rem;font-weight:600;">${i + 1}</td>
+        <td>${type}</td>
+        <td style="font-family:monospace;font-weight:800;font-size:.8rem;color:#1e1b4b;">${c.reference}</td>
+        <td style="font-size:.8rem;color:#64748b;">${new Date(c.date).toLocaleDateString('ar-DZ')}</td>
+        <td style="text-align:center;font-weight:700;font-size:.85rem;">${c.parcelsCount || 0}</td>
+        <td style="font-weight:800;color:#7c3aed;font-size:.88rem;">${Number(c.amount || 0).toLocaleString('ar-DZ')} DA</td>
+        <td style="font-size:.8rem;color:#475569;">${c.supervisor || '—'}</td>
+        <td style="font-size:.8rem;color:#475569;">${c.operator || c.driver || '—'}</td>
+        <td>
+          <span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:4px;font-weight:700;font-size:.78rem;">
+            ${c.status || '—'}
+          </span>
+        </td>
+      </tr>`;
+  });
+
+  const html = `
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>تقرير التجميعات — Tracify</title>
+      <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+          font-family: 'Cairo', Arial, sans-serif;
+          direction: rtl;
+          background: #f5f3ff;
+          color: #1e1b4b;
+          padding: 28px;
+          font-size: 14px;
+        }
+
+        /* ─── Header ─── */
+        .header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          background: linear-gradient(135deg, #7c3aed 0%, #06b6d4 100%);
+          border-radius: 16px;
+          padding: 20px 26px;
+          margin-bottom: 18px;
+          color: white;
+          box-shadow: 0 8px 32px rgba(124,58,237,.25);
+        }
+        .header-left {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+        }
+        .header-logo {
+          background: white;
+          border-radius: 12px;
+          padding: 10px 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 80px;
+          min-height: 72px;
+          box-shadow: 0 4px 12px rgba(0,0,0,.15);
+        }
+        .header-title h1 {
+          font-size: 1.45rem;
+          font-weight: 900;
+          margin-bottom: 3px;
+          letter-spacing: -.5px;
+        }
+        .header-title p {
+          font-size: .78rem;
+          opacity: .8;
+          font-weight: 400;
+          letter-spacing: .5px;
+        }
+        .header-divider {
+          width: 1px;
+          height: 50px;
+          background: rgba(255,255,255,.3);
+          margin: 0 4px;
+        }
+        .header-right {
+          text-align: left;
+          font-size: .8rem;
+          line-height: 1.8;
+          opacity: .92;
+        }
+        .header-right strong { font-weight: 800; }
+
+        /* ─── Stats bar ─── */
+        .stats-bar {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 18px;
+        }
+        .stat-card {
+          flex: 1;
+          background: white;
+          border-radius: 12px;
+          padding: 14px 18px;
+          border-right: 4px solid #7c3aed;
+          box-shadow: 0 2px 10px rgba(124,58,237,.08);
+          position: relative;
+          overflow: hidden;
+        }
+        .stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, #7c3aed, transparent);
+          opacity: .3;
+        }
+        .stat-card.cyan { border-right-color: #06b6d4; }
+        .stat-card.cyan::before { background: linear-gradient(90deg, #06b6d4, transparent); }
+        .stat-card.green { border-right-color: #16a34a; }
+        .stat-card.green::before { background: linear-gradient(90deg, #16a34a, transparent); }
+        .stat-label {
+          font-size: .72rem;
+          color: #94a3b8;
+          margin-bottom: 5px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: .5px;
+        }
+        .stat-value {
+          font-size: 1.3rem;
+          font-weight: 900;
+          color: #1e1b4b;
+          line-height: 1;
+        }
+        .stat-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          font-size: 1.6rem;
+          opacity: .08;
+        }
+
+        /* ─── Section title ─── */
+        .section-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: .78rem;
+          font-weight: 800;
+          color: #7c3aed;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 10px;
+        }
+        .section-title::before {
+          content: '';
+          display: inline-block;
+          width: 4px;
+          height: 16px;
+          background: linear-gradient(180deg, #7c3aed, #06b6d4);
+          border-radius: 2px;
+        }
+
+        /* ─── Table ─── */
+        .table-wrapper {
+          background: white;
+          border-radius: 14px;
+          overflow: hidden;
+          box-shadow: 0 4px 20px rgba(124,58,237,.09);
+          margin-bottom: 20px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        thead tr {
+          background: linear-gradient(90deg, #7c3aed 0%, #5b21b6 50%, #06b6d4 100%);
+        }
+        thead th {
+          color: white;
+          padding: 11px 12px;
+          font-size: .78rem;
+          font-weight: 700;
+          text-align: right;
+          white-space: nowrap;
+        }
+        tbody td {
+          padding: 9px 12px;
+          border-bottom: 1px solid #f1f5f9;
+          vertical-align: middle;
+        }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover { background: #f8f7ff !important; }
+
+        /* ─── Footer ─── */
+        .footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 4px;
+        }
+        .total-box {
+          background: linear-gradient(135deg, #7c3aed, #06b6d4);
+          color: white;
+          border-radius: 12px;
+          padding: 14px 26px;
+          box-shadow: 0 4px 16px rgba(124,58,237,.3);
+        }
+        .total-box .total-label {
+          font-size: .72rem;
+          opacity: .8;
+          font-weight: 400;
+          margin-bottom: 3px;
+        }
+        .total-box .total-amount {
+          font-size: 1.3rem;
+          font-weight: 900;
+          letter-spacing: -.5px;
+        }
+        .footer-note {
+          text-align: left;
+          font-size: .7rem;
+          color: #94a3b8;
+          line-height: 1.7;
+        }
+        .footer-note .brand {
+          font-weight: 800;
+          color: #7c3aed;
+          font-size: .78rem;
+        }
+
+        /* ─── Watermark ─── */
+        .watermark {
+          position: fixed;
+          bottom: 40px;
+          left: 50%;
+          transform: translateX(-50%) rotate(-30deg);
+          font-size: 5rem;
+          font-weight: 900;
+          color: rgba(124,58,237,.04);
+          pointer-events: none;
+          white-space: nowrap;
+          letter-spacing: 8px;
+          z-index: 0;
+        }
+
+        @media print {
+          body { background: white; padding: 15px; }
+          .stat-card, .table-wrapper { box-shadow: none; }
+          .header { box-shadow: none; }
+          .total-box { box-shadow: none; }
+        }
+      </style>
+    </head>
+    <body>
+
+      <div class="watermark">TRACIFY</div>
+
+      <!-- Header -->
+      <div class="header">
+        <div class="header-left">
+          <div class="header-logo">${logoTag}</div>
+          <div class="header-divider"></div>
+          <div class="header-title">
+            <h1>تقرير التجميعات</h1>
+            <p>Closings Report — Tracify Platform</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <div>📅 <strong>${dateStr}</strong></div>
+          <div>⏰ <strong>${timeStr}</strong></div>
+          <div>🏢 <strong>${user.stationName || 'غير محدد'}</strong></div>
+          <div>👤 <strong>${user.username || 'غير محدد'}</strong></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-label">عدد التجميعات</div>
+          <div class="stat-value">${selected.length}</div>
+          <div class="stat-icon">📋</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-label">إجمالي الطرود</div>
+          <div class="stat-value">${totalParcels.toLocaleString('ar-DZ')}</div>
+          <div class="stat-icon">📦</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">المجموع الكلي</div>
+          <div class="stat-value">${Number(total).toLocaleString('ar-DZ')} DA</div>
+          <div class="stat-icon">💰</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="section-title">تفاصيل التجميعات</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>النوع</th>
+              <th>المرجع</th>
+              <th>التاريخ</th>
+              <th>الطرود</th>
+              <th>المبلغ</th>
+              <th>المسؤول</th>
+              <th>المنفذ</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div class="total-box">
+          <div class="total-label">المجموع الكلي للتجميعات المحددة</div>
+          <div class="total-amount">${Number(total).toLocaleString('ar-DZ')} DA</div>
+        </div>
+        <div class="footer-note">
+          <div class="brand">Tracify</div>
+          تم إنشاء هذا التقرير تلقائياً<br>
+          ${dateStr}<br>
+          ${timeStr}
+        </div>
+      </div>
+
+    </body>
+    </html>
+  `;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 800);
+}
+
+// ==================================================
+// تحميل عند فتح الصفحة
+// ==================================================
+loadClosings();
+</script>
+</body>
+</html>

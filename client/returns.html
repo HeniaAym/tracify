@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المرتجعات - Tracify</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/style.css">
+  <style>
+    .page-tabs { display:flex;gap:.25rem;margin-bottom:1.5rem;background:white;border-radius:var(--radius);border:1px solid var(--border);padding:.4rem;width:fit-content; }
+    .page-tab { padding:.52rem 1.2rem;border:none;background:none;font-family:'Cairo',sans-serif;font-size:.875rem;font-weight:700;color:var(--gray);cursor:pointer;border-radius:var(--radius-sm);transition:var(--transition);display:flex;align-items:center;gap:.4rem; }
+    .page-tab:hover { background:var(--light);color:var(--dark); }
+    .page-tab.active { background:var(--primary);color:white; }
+    .rate-card { background:white;border-radius:var(--radius);border:1px solid var(--border);padding:1.4rem 1rem;text-align:center;box-shadow:var(--shadow); }
+    .circle-wrap { position:relative;width:118px;height:118px;margin:0 auto .75rem; }
+    .circle-wrap svg { transform:rotate(-90deg); }
+    .circle-wrap .pct { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.35rem;font-weight:800;color:var(--dark); }
+    .rate-card h4 { font-size:.88rem;font-weight:700;color:var(--dark);margin-bottom:.2rem; }
+    .rate-card .sub { font-size:.75rem;color:var(--gray); }
+    .month-badge { display:inline-block;background:#dbeafe;color:var(--primary);padding:.15rem .6rem;border-radius:20px;font-size:.75rem;font-weight:700;font-family:monospace; }
+    .month-rate-bar { display:flex;gap:2px;height:6px;border-radius:4px;overflow:hidden;width:78px; }
+    .month-rate-bar .seg-d { background:var(--success); }
+    .month-rate-bar .seg-r { background:var(--danger); }
+    .upload-mini { border:2px dashed var(--border);border-radius:var(--radius);padding:1.5rem;text-align:center;cursor:pointer;transition:var(--transition);background:var(--light);position:relative; }
+    .upload-mini:hover,.upload-mini.dragover { border-color:var(--primary);background:var(--primary-light); }
+    .upload-mini input { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+    .upload-mini i { font-size:1.7rem;color:var(--primary);margin-bottom:.5rem;display:block; }
+    .upload-mini h4 { font-size:.88rem;font-weight:700;margin-bottom:.25rem; }
+    .upload-mini p  { font-size:.78rem;color:var(--gray); }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation:fadeUp .3s ease forwards; }
+  </style>
+</head>
+<body>
+
+<div id="navbar-mount"></div>
+<div class="container">
+    <div class="page-header">
+      <div class="page-header-icon" style="background:linear-gradient(135deg,#ef4444,#f97316);"><i class="fas fa-undo-alt"></i></div>
+      <div><h1>إدارة المرتجعات</h1><p>متابعة المرتجعات وتحليل نسب التسليم</p></div>
+    </div>
+
+    <div class="page-tabs">
+      <button class="page-tab active" onclick="showPanel('overview',this)"><i class="fas fa-chart-pie"></i> نظرة عامة</button>
+      <button class="page-tab" onclick="showPanel('monthly',this)"><i class="fas fa-calendar-alt"></i> التقرير الشهري</button>
+      <button class="page-tab" onclick="showPanel('all',this)"><i class="fas fa-list"></i> كل المرتجعات</button>
+      <button class="page-tab" onclick="showPanel('upload',this)"><i class="fas fa-upload"></i> رفع ملف</button>
+    </div>
+
+    <!-- نظرة عامة -->
+    <div class="panel active" id="panel-overview">
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.25rem;">
+        <div class="stat-card fade-up"><div class="stat-card-icon blue"><i class="fas fa-boxes"></i></div><div><div class="stat-card-label">إجمالي الطرود</div><div class="stat-card-value" id="o-total">—</div></div></div>
+        <div class="stat-card fade-up" style="animation-delay:.05s"><div class="stat-card-icon green"><i class="fas fa-check-double"></i></div><div><div class="stat-card-label">مُسلَّم</div><div class="stat-card-value" id="o-delivered">—</div></div></div>
+        <div class="stat-card fade-up" style="animation-delay:.1s"><div class="stat-card-icon red"><i class="fas fa-undo"></i></div><div><div class="stat-card-label">مرتجع</div><div class="stat-card-value" id="o-returned">—</div></div></div>
+        <div class="stat-card fade-up" style="animation-delay:.15s"><div class="stat-card-icon orange"><i class="fas fa-clock"></i></div><div><div class="stat-card-label">معلق</div><div class="stat-card-value" id="o-pending">—</div></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;">
+        <div class="card fade-up" style="animation-delay:.2s">
+          <div class="card-header"><div class="card-header-title"><i class="fas fa-chart-pie"></i> نسبة التسليم والمرتجع</div></div>
+          <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="rate-card">
+              <div class="circle-wrap"><svg width="118" height="118" viewBox="0 0 118 118"><circle cx="59" cy="59" r="48" fill="none" stroke="var(--border)" stroke-width="10"/><circle cx="59" cy="59" r="48" fill="none" stroke="#10b981" stroke-width="10" stroke-linecap="round" id="c-delivery" stroke-dasharray="0 302"/></svg><div class="pct" id="p-delivery">0%</div></div>
+              <h4>نسبة التسليم</h4><div class="sub" id="sub-delivery">—</div>
+            </div>
+            <div class="rate-card">
+              <div class="circle-wrap"><svg width="118" height="118" viewBox="0 0 118 118"><circle cx="59" cy="59" r="48" fill="none" stroke="var(--border)" stroke-width="10"/><circle cx="59" cy="59" r="48" fill="none" stroke="#ef4444" stroke-width="10" stroke-linecap="round" id="c-return" stroke-dasharray="0 302"/></svg><div class="pct" id="p-return">0%</div></div>
+              <h4>نسبة المرتجع</h4><div class="sub" id="sub-return">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="card fade-up" style="animation-delay:.25s">
+          <div class="card-header"><div class="card-header-title"><i class="fas fa-history"></i> آخر المرتجعات</div></div>
+          <div class="table-wrapper" style="border:none;max-height:250px;overflow-y:auto;">
+            <table class="table">
+              <thead><tr><th>رقم التتبع</th><th>العميل</th><th>الهاتف</th><th>القيمة</th></tr></thead>
+              <tbody id="recent-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- التقرير الشهري -->
+    <div class="panel" id="panel-monthly">
+      <div class="card">
+        <div class="card-header"><div class="card-header-title"><i class="fas fa-calendar-alt"></i> نسب التسليم والمرتجع شهر بشهر</div></div>
+        <div class="table-wrapper" style="border:none;border-radius:0 0 var(--radius) var(--radius);">
+          <table class="table">
+            <thead><tr><th>الشهر</th><th>مُسلَّم</th><th>مرتجع</th><th>الإجمالي</th><th>نسبة التسليم</th><th>نسبة المرتجع</th><th>التوزيع</th></tr></thead>
+            <tbody id="monthly-body"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray);"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- كل المرتجعات -->
+    <div class="panel" id="panel-all">
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-body" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+          <div class="form-group" style="margin:0;flex:1;min-width:180px;"><label>فلتر بالشهر</label><input type="month" id="filter-month" onchange="loadAllReturns()"></div>
+          <div style="padding-top:1.4rem;"><button class="btn btn-outline" onclick="clearFilters()"><i class="fas fa-times"></i> مسح</button></div>
+          <div style="padding-top:1.4rem;margin-right:auto;"><span id="all-count" style="font-size:.82rem;color:var(--gray);font-weight:700;"></span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrapper" style="border:none;border-radius:var(--radius);">
+          <table class="table">
+            <thead><tr><th>#</th><th>رقم التتبع</th><th>العميل</th><th>الهاتف</th><th>القيمة</th><th>التاريخ</th></tr></thead>
+            <tbody id="all-body"><tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray);"><i class="fas fa-spinner fa-spin"></i></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- رفع ملف -->
+    <div class="panel" id="panel-upload">
+      <div style="max-width:520px;margin:0 auto;">
+        <div class="card">
+          <div class="card-header"><div class="card-header-title"><i class="fas fa-cloud-upload-alt"></i> رفع ملف مرتجعات ECOTRACK</div></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:1rem;">
+            <div class="upload-mini" id="dropZone">
+              <input type="file" id="returnsFile" accept=".xlsx,.xls">
+              <i class="fas fa-file-excel"></i>
+              <h4>اسحب الملف هنا أو انقر للاختيار</h4>
+              <p>ملف Excel من نظام ECOTRACK</p>
+              <div id="uploadFileName" style="display:none;margin-top:.5rem;font-size:.82rem;font-weight:700;color:var(--primary);"></div>
+            </div>
+            <button class="btn btn-primary btn-full btn-lg" id="uploadBtn" disabled onclick="doUpload()"><i class="fas fa-upload"></i> استيراد المرتجعات</button>
+            <div id="upload-result"></div>
+            <div class="alert alert-info"><i class="fas fa-info-circle"></i><div>الطرود المعلقة ستتحوّل إلى <strong>مرتجع</strong>. الطرود المسلّمة لن تتأثر.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+</div>
+
+<div id="global-loader" class="loader" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;"></div>
+<script src="scripts/api.js"></script>
+<script src="scripts/navbar.js"></script>
+<script>
+  const CIRC=2*Math.PI*48;
+  function showPanel(name,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.page-tab').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+name).classList.add('active');btn.classList.add('active');if(name==='overview')loadOverview();if(name==='monthly')loadMonthly();if(name==='all')loadAllReturns();}
+  async function loadOverview(){try{const d=await fetchAPI('/returns/dashboard');const s=d.stats;setText('o-total',s.totalInSystem);setText('o-delivered',s.totalDelivered);setText('o-returned',s.totalReturned);setText('o-pending',s.totalPending);animCircle('c-delivery','p-delivery',parseFloat(s.deliveryRate));animCircle('c-return','p-return',parseFloat(s.returnRate));setText('sub-delivery',`${s.totalDelivered} من ${s.totalAll}`);setText('sub-return',`${s.totalReturned} من ${s.totalAll}`);const tbody=document.getElementById('recent-body');tbody.innerHTML=d.recentReturns.length?d.recentReturns.map(r=>`<tr><td style="font-family:monospace;font-weight:700;color:var(--primary);font-size:.78rem;">${r.tracking}</td><td>${r.customer}</td><td style="font-family:monospace;font-size:.8rem;">${r.phone}</td><td style="font-weight:700;color:var(--danger);">${Number(r.price||0).toLocaleString('ar-DZ')} DA</td></tr>`).join(''):'<tr><td colspan="4"><div class="empty-state"><div class="empty-state-icon" style="background:#fee2e2;color:#ef4444;"><i class="fas fa-box-open"></i></div><h3>لا توجد مرتجعات</h3></div></td></tr>';}catch(e){console.error(e);}}
+  async function loadMonthly(){try{const d=await fetchAPI('/returns/monthly');const tbody=document.getElementById('monthly-body');if(!d.months.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon" style="background:#fee2e2;color:#ef4444;"><i class="fas fa-calendar-times"></i></div><h3>لا توجد بيانات</h3></div></td></tr>';return;}tbody.innerHTML=d.months.map(m=>`<tr><td><span class="month-badge">${m.label}</span></td><td class="amount-positive"><strong>${m.delivered}</strong></td><td class="amount-negative"><strong>${m.returned}</strong></td><td style="color:var(--gray);">${m.total}</td><td><span class="badge badge-success">${m.deliveryRate}%</span></td><td><span class="badge badge-danger">${m.returnRate}%</span></td><td><div class="month-rate-bar"><div class="seg-d" style="width:${m.deliveryRate}%"></div><div class="seg-r" style="width:${m.returnRate}%"></div></div></td></tr>`).join('');}catch(e){console.error(e);}}
+  async function loadAllReturns(){const month=document.getElementById('filter-month').value;try{const data=await fetchAPI('/returns/all'+(month?`?month=${month}`:''));const tbody=document.getElementById('all-body');document.getElementById('all-count').textContent=`${data.length} نتيجة`;tbody.innerHTML=data.length?data.map((r,i)=>`<tr><td style="color:var(--gray);font-size:.78rem;">${i+1}</td><td style="font-family:monospace;font-weight:700;color:var(--primary);font-size:.78rem;">${r.tracking}</td><td>${r.customer}</td><td style="font-family:monospace;font-size:.8rem;">${r.phone}</td><td style="font-weight:700;color:var(--danger);">${Number(r.price||0).toLocaleString('ar-DZ')} DA</td><td style="font-size:.78rem;color:var(--gray);">${new Date(r.createdAt).toLocaleDateString('ar-DZ')}</td></tr>`).join(''):'<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon" style="background:#fee2e2;color:#ef4444;"><i class="fas fa-box-open"></i></div><h3>لا توجد مرتجعات</h3></div></td></tr>';}catch(e){console.error(e);}}
+  function clearFilters(){document.getElementById('filter-month').value='';loadAllReturns();}
+  const dropZone=document.getElementById('dropZone'),fileInput=document.getElementById('returnsFile'),uploadBtn=document.getElementById('uploadBtn'),fileNameEl=document.getElementById('uploadFileName');
+  fileInput.addEventListener('change',()=>{if(fileInput.files[0]){fileNameEl.textContent='📄 '+fileInput.files[0].name;fileNameEl.style.display='block';uploadBtn.disabled=false;}});
+  dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
+  dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');if(e.dataTransfer.files[0]){fileInput.files=e.dataTransfer.files;fileNameEl.textContent='📄 '+e.dataTransfer.files[0].name;fileNameEl.style.display='block';uploadBtn.disabled=false;}});
+  async function doUpload(){const file=fileInput.files[0];if(!file)return;uploadBtn.disabled=true;uploadBtn.innerHTML='<i class="fas fa-spinner fa-spin"></i> جاري الاستيراد...';const resultDiv=document.getElementById('upload-result');try{const fd=new FormData();fd.append('file',file);const data=await fetchAPI('/returns/upload',{method:'POST',body:fd});resultDiv.innerHTML=`<div class="alert alert-success"><i class="fas fa-check-circle"></i><div><strong>${data.message}</strong></div></div>`;fileInput.value='';fileNameEl.style.display='none';uploadBtn.disabled=true;uploadBtn.innerHTML='<i class="fas fa-upload"></i> استيراد المرتجعات';}catch(e){resultDiv.innerHTML=`<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${e.message}</div>`;uploadBtn.disabled=false;uploadBtn.innerHTML='<i class="fas fa-upload"></i> استيراد المرتجعات';}}
+  function setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+  function animCircle(cId,pId,value){const c=document.getElementById(cId),p=document.getElementById(pId);const target=(value/100)*CIRC;let cur=0;const iv=setInterval(()=>{cur+=target/60;if(cur>=target){cur=target;clearInterval(iv);}c.setAttribute('stroke-dasharray',`${cur.toFixed(1)} ${CIRC}`);p.textContent=Math.round((cur/CIRC)*100)+'%';},16);}
+  loadOverview();
+</script>
+</body>
+</html>

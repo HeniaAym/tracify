@@ -35,7 +35,7 @@ function buildNavbar() {
         {
           label: 'لوحة التحكم',
           icon: 'fas fa-tachometer-alt',
-          href: '/index',
+          href: '/',
           visible: true,
           active: currentPage === 'index.html'
         }
@@ -48,7 +48,7 @@ function buildNavbar() {
         {
           label: 'بحث وتسليم',
           icon: 'fas fa-search',
-          href: '/search.html',
+          href: '/search',
           visible: true,
           active: currentPage === 'search.html'
         },

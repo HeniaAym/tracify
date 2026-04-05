@@ -35,7 +35,7 @@ function buildNavbar() {
         {
           label: 'لوحة التحكم',
           icon: 'fas fa-tachometer-alt',
-          href: '/index.html',
+          href: '/index',
           visible: true,
           active: currentPage === 'index.html'
         }
@@ -48,21 +48,21 @@ function buildNavbar() {
         {
           label: 'بحث وتسليم',
           icon: 'fas fa-search',
-          href: '/search.html',
+          href: '/search',
           visible: true,
           active: currentPage === 'search.html'
         },
         {
           label: 'استيراد Excel',
           icon: 'fas fa-file-upload',
-          href: '/import.html',
+          href: '/import',
           visible: true,
           active: currentPage === 'import.html'
         },
         {
           label: 'تعديل الطرود',
           icon: 'fas fa-edit',
-          href: '/edit.html',
+          href: '/edit',
           visible: role === 'supervisor' || role === 'admin',
           active: currentPage === 'edit.html'
         }
@@ -75,7 +75,7 @@ function buildNavbar() {
         {
           label: 'إقفال الصندوق',
           icon: 'fas fa-lock',
-          href: '/closing.html',
+          href: '/closing',
           visible: role === 'supervisor' || role === 'admin',
           active: currentPage === 'closing.html'
         },
@@ -96,7 +96,7 @@ function buildNavbar() {
         {
           label: 'المصاريف',
           icon: 'fas fa-wallet',
-          href: '/expenses.html',
+          href: '/expenses',
           visible: role === 'supervisor' || role === 'admin',
           active: currentPage === 'expenses.html'
         }
@@ -108,7 +108,7 @@ function buildNavbar() {
         {
           label: 'المرتجعات',
           icon: 'fas fa-undo-alt',
-          href: '/returns.html',
+          href: '/returns',
           visible: role === 'supervisor' || role === 'admin',
           active: currentPage === 'returns.html'
         }
@@ -233,7 +233,7 @@ function buildMobileNav() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const role = user.role || 'user';
   const path = window.location.pathname;
-  const currentPage = path.split('/').pop() || 'index.html';
+  const currentPage = path.split('/').pop() || 'index';
 
   const navItems = [
     {
@@ -242,7 +242,7 @@ function buildMobileNav() {
         {
           label: 'لوحة التحكم',
           icon: 'fas fa-tachometer-alt',
-          href: '/index.html',
+          href: '/index',
           visible: true
         }
       ]
